@@ -1,4 +1,6 @@
 
+![Flint](flint.png)
+
 # Flint
 
 Software renderer for simple 2D games.
