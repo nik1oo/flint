@@ -385,7 +385,7 @@ pub const WindowConfig = struct {
 	height:    u16 = 720,
 	allocator: std.mem.Allocator };
 
-/// A window with a buffer.
+/// A window with a buffer. This is the only platform-dependent component of Flint.
 pub const Window = struct {
 	h_wnd:     win32.HWND = 0,
 	h_dc:      win32.HDC = 0,

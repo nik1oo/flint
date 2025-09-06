@@ -13,3 +13,16 @@ Software renderer for simple 2D games.
 # How-to
 
 To open the documentation execute `make doc-host` from inside `flint/src` and go to `http://localhost:8000/`.
+
+# Checklist
+
+- [x] Fill buffer with solid color.
+- [ ] Fill a pixel (or slice of pixels) in a buffer with color.
+- [ ] Fill a rectangle (or slice of rectangles) with a solid color.
+- [ ] Texture sampler with filtering and scaling.
+- [ ] Fill a pixel (or slice of pixels) with a texture.
+- [ ] Fill a rectangle (or slice of rectangles) with a texture.
+- [ ] Fill buffer with a pixel shader.
+- [ ] Fill a pixel (or slice of pixels) with a pixel shader.
+- [ ] Fill a rectangle (or slice of rectangles) with a pixel shader.
+- [ ] Implement all the blend modes from Photoshop.
