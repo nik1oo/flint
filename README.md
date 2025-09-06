@@ -9,3 +9,7 @@ Software renderer for simple 2D games.
  * Procedures that draw to a buffer.
  * Every procedures has a blend-mode parameter, which determines how the new value of every pixel blends with the current value.
  * You can create arbitrarily many auxiliary buffers to render to.
+
+# How-to
+
+To open the documentation execute `make doc` from inside `/src` and go to `http://localhost:8000/`.

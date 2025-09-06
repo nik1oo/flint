@@ -2,26 +2,21 @@ const std = @import("std");
 const flint = @import("flint");
 
 pub fn main() !void {
-	std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
+	std.debug.print("Flint version {s}.\n", .{ flint.VERSION_STRING });
 	const wnd_name: [*]const u8 = "Flint\x00";
-	const window: flint.Window = try flint.newWindow(.{ .name = wnd_name, .width = 1280, .height = 720 });
-	while (flint.pollWindow(&window)) {  } }
-
-test "simple test" {
-    const gpa = std.testing.allocator;
-    var list: std.ArrayList(i32) = .empty;
-    defer list.deinit(gpa); // Try commenting this out and see if zig detects the memory leak!
-    try list.append(gpa, 42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
-}
-
-test "fuzz example" {
-    const Context = struct {
-        fn testOne(context: @This(), input: []const u8) anyerror!void {
-            _ = context;
-            // Try passing `--fuzz` to `zig build test` and see if it manages to fail this test case!
-            try std.testing.expect(!std.mem.eql(u8, "canyoufindme", input));
-        }
-    };
-    try std.testing.fuzz(Context{}, Context.testOne, .{});
-}
+	const window: flint.Window = try flint.Window.new(.{ .name = wnd_name, .width = 1280, .height = 720, .depth = 4, .allocator = allocator });
+	const color = try flint.Color.rgba8(0.5, 0.25, 0.333, 1, allocator);
+	std.debug.print("Color: {d}, {d}, {d}, {d}.\n", .{ color.bytes[0], color.bytes[1], color.bytes[2], color.bytes[3] });
+	try window.buffer.print();
+	const qoi_file = try std.fs.cwd().openFile("../flint.qoi", .{});
+	defer qoi_file.close();
+	const qoi_bytes = try allocator.alloc(u8, (try qoi_file.stat()).size);
+	defer allocator.free(qoi_bytes);
+	const bytes_read = try qoi_file.readAll(qoi_bytes);
+	std.debug.print("{s}\n", .{qoi_bytes});
+	_ = bytes_read;
+	_ = try flint.Buffer.newFromQOI(qoi_bytes, allocator);
+	while (window.poll()) { } }
