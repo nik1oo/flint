@@ -15,87 +15,109 @@ pub const G = 1;
 pub const B = 2;
 pub const A = 3;
 
-fn depthIsValid(depth: u8) bool {
-	return (depth == 1) or (depth == 2) or (depth == 4); }
-
 fn nChannelsIsValid(n_channels: u8) bool {
 	return (n_channels == 1) or (n_channels == 3) or (n_channels == 4); }
 
-/// An RGB, RGBA, or grayscale value.
-pub const Color = struct {
-	bytes: []u8,
+/// An RGB, RGBA, or grayscale color value with unknown cardinality.
+pub const Color     = [4]u8;
 
-	/// Create a 1-byte deep RGBA value..
-	pub fn rgba8(r: f32, g: f32, b: f32, a: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u8, 4);
-		values[0] = @intFromFloat(r * 0xFF);
-		values[1] = @intFromFloat(g * 0xFF);
-		values[2] = @intFromFloat(b * 0xFF);
-		values[3] = @intFromFloat(a * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; }
+/// An RGBA color value.
+pub const ColorRGBA = [4]u8;
 
-	/// Create a 1-byte deep RGB value..
-	pub fn rgb8(r: f32, g: f32, b: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u8, 3);
-		values[0] = @intFromFloat(r * 0xFF);
-		values[1] = @intFromFloat(g * 0xFF);
-		values[2] = @intFromFloat(b * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; }
+/// An RGB color value.
+pub const ColorRGB  = [3]u8;
 
-	/// Create a 1-byte deep grayscale value..
-	pub fn gray8(gray: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u8, 1);
-		values[0] = @intFromFloat(gray * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; }
+/// A grayscale color value.
+pub const ColorGray = [1]u8;
 
-	/// Create a 2-byte deep RGBA value..
-	pub fn rgba16(r: f32, g: f32, b: f32, a: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u16, 4);
-		values[0] = @intFromFloat(r * 0xFF);
-		values[1] = @intFromFloat(g * 0xFF);
-		values[2] = @intFromFloat(b * 0xFF);
-		values[3] = @intFromFloat(a * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; }
+/// Support structure for defining RGBA, RGB, or Grayscale colors.
+pub const AnyColor = struct {
+	color:      Color = .{ 0 } ** 4,
+	n_channels: u8    = 1,
 
-	/// Create a 2-byte deep RGB value..
-	pub fn rgb16(r: f32, g: f32, b: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u16, 3);
-		values[0] = @intFromFloat(r * 0xFF);
-		values[1] = @intFromFloat(g * 0xFF);
-		values[2] = @intFromFloat(b * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; }
+	/// Create an RGBA `AnyColor`.
+	pub fn newRGBA(r: f32, g: f32, b: f32, a: f32) !AnyColor {
+		return .{
+			.color = .{
+				@intFromFloat(r * 0xFF),
+				@intFromFloat(g * 0xFF),
+				@intFromFloat(b * 0xFF),
+				@intFromFloat(a * 0xFF) },
+			.n_channels = 4 }; }
 
-	/// Create a 2-byte deep grayscale value..
-	pub fn gray16(gray: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u16, 1);
-		values[0] = @intFromFloat(gray * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; }
+	/// Create an RGB `AnyColor`.
+	pub fn newRGB(r: f32, g: f32, b: f32) !AnyColor {
+		return .{
+			.color = .{
+				@intFromFloat(r * 0xFF),
+				@intFromFloat(g * 0xFF),
+				@intFromFloat(b * 0xFF),
+				0 },
+			.n_channels = 3 }; }
 
-	/// Create a 4-byte deep RGBA value..
-	pub fn rgba32(r: f32, g: f32, b: f32, a: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u32, 4);
-		values[0] = @intFromFloat(r * 0xFF);
-		values[1] = @intFromFloat(g * 0xFF);
-		values[2] = @intFromFloat(b * 0xFF);
-		values[3] = @intFromFloat(a * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; }
+	/// Create a grayscale `AnyColor`.
+	pub fn newGray(gray: f32) !AnyColor {
+		return .{
+			.color = .{
+				@intFromFloat(gray * 0xFF),
+				0,
+				0,
+				0 },
+			.n_channels = 1 }; }
 
-	/// Create a 4-byte deep RGB value..
-	pub fn rgb32(r: f32, g: f32, b: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u32, 3);
-		values[0] = @intFromFloat(r * 0xFF);
-		values[1] = @intFromFloat(g * 0xFF);
-		values[2] = @intFromFloat(b * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; }
+	pub fn mix(self: AnyColor, other: AnyColor, t: f32) AnyColor {
+		return .{
+			.color = .{
+				@intFromFloat(@as(f32, @floatFromInt(self.color[R])) * (1 - t) + @as(f32, @floatFromInt(other.color[R])) * t),
+				@intFromFloat(@as(f32, @floatFromInt(self.color[G])) * (1 - t) + @as(f32, @floatFromInt(other.color[G])) * t),
+				@intFromFloat(@as(f32, @floatFromInt(self.color[B])) * (1 - t) + @as(f32, @floatFromInt(other.color[B])) * t),
+				@intFromFloat(@as(f32, @floatFromInt(self.color[A])) * (1 - t) + @as(f32, @floatFromInt(other.color[A])) * t) },
+			.n_channels = self.n_channels }; }
 
-	/// Create a 4-byte deep grayscale value..
-	pub fn gray32(gray: f32, allocator: std.mem.Allocator) !Color {
-		const values = try allocator.alloc(u32, 1);
-		values[0] = @intFromFloat(gray * 0xFF);
-		return .{ .bytes = @ptrCast(values) }; } };
+	pub fn blend(self: AnyColor, other: AnyColor, blendMode: BlendMode) AnyColor {
+		return switch (blendMode) {
+			.COPY => self.blendCopy(other),
+			.ADD  => self.blendAdd(other),
+			.SUB  => self.blendSub(other),
+			.MUL  => self.blendMul(other),
+			.MAX  => self.blendMax(other),
+			.MIN  => self.blendMin(other) }; }
+
+	pub fn blendCopy(self: AnyColor, other: AnyColor) AnyColor {
+		_ = self;
+		return other; }
+
+	pub fn blendAdd(self: AnyColor, other: AnyColor) AnyColor {
+		var result: AnyColor = .{};
+		for (0..self.n_channels) |i| {
+			// TODO Convert to float first.
+			result.color[i] = self.color[i] +% other.color[i]; }
+		return result; }
+
+	pub fn blendSub(self: AnyColor, other: AnyColor) AnyColor {
+		var result: AnyColor = .{};
+		for (0..self.n_channels) |i| {
+			// TODO Convert to float first.
+			result.color[i] = self.color[i] - other.color[i]; }
+		return result; }
+
+	pub fn blendMul(self: AnyColor, other: AnyColor) AnyColor {
+		var result: AnyColor = .{};
+		for (0..self.n_channels) |i| {
+			// TODO Convert to float first.
+			result.color[i] = self.color[i] * other.color[i]; }
+		return result; }
+
+	pub fn blendDiv(self: AnyColor, other: AnyColor) AnyColor {
+		var result: AnyColor = .{};
+		for (0..self.n_channels) |i| {
+			// TODO Convert to float first.
+			result.color[i] = self.color[i] / other.color[i]; }
+		return result; }
+};
 
 /// Decompose a slice of bytes representing a color
-// pub fn decomposeColor(color: []u8, n_channels: u8, depth: u8) [][]u8 {
+// pub fn decomposeColor(color: []u8, n_channels: u8) [][]u8 {
 // }
 
 /// A single channel of an image buffer. Contains the red, green, blue, or alpha values of a color image, or the gray values of a grayscale image. Contains no meta-data about dimensions, channels, or encoding. Those are determined by the parent `Buffer`.
@@ -110,15 +132,15 @@ pub const Channel = struct {
 		return .{ .bytes = &[0]u8{} }; }
 
 	/// Allocate and initialize a new `Channel`.
-	pub fn new(width: u16, height: u16, depth: u8, allocator: std.mem.Allocator) !Channel {
+	pub fn new(width: u16, height: u16, allocator: std.mem.Allocator) !Channel {
 		const channel: Channel = .{
-			.bytes = try allocator.alloc(u8, @as(u32, width) * @as(u32, height) * @as(u32, depth)) };
+			.bytes = try allocator.alloc(u8, @as(u32, width) * @as(u32, height)) };
 		return channel; }
 
 	/// Fill the given `Channel` uniformly with a given `Color`.
-	pub fn fill(channel: *const Channel, depth: u8, color: Color) noreturn {
+	pub fn fill(channel: *const Channel, color: Color) noreturn {
 		for (0..channel.bytes.len) |i| {
-			channel.bytes[i] = color.bytes[i % depth]; } }
+			channel.bytes[i] = color.bytes[i]; } }
 
 	/// Fill the given `Channel` with zeroes.
 	pub fn clear(channel: *const Channel) noreturn {
@@ -126,20 +148,18 @@ pub const Channel = struct {
 			channel.bytes[i] = 0; } }
 
 	/// Get the index of the pixel at the given coordinates.
-	pub fn pixelIndex(depth: u8, width: u16, x: u16, y: u16) u32 {
-		return y * width * depth + x * depth; }
+	pub fn pixelIndex(width: u16, x: u16, y: u16) u32 {
+		return y * width + x; }
 
 	/// Set the value of the pixel at the given coordinates.
-	pub fn set_pixel(self: *const Channel, depth: u8, width: u16, height: u16, x: u16, y: u16, value: []u8) !void {
-		if (depthIsValid(depth) == false) { return error.InvalidColorDepth; }
-		const i: u32 = self.pixelIndex(depth, width, height, x, y);
-		@memcpy(self.bytes[i..i + depth], value[0..depth]); }
+	pub fn setPixel(self: *const Channel, width: u16, height: u16, x: u16, y: u16, value: u8) !void {
+		const i: u32 = self.pixelIndex(width, height, x, y);
+		@memcpy(self.bytes[i], value); }
 
 	/// Get the value of the pixel at the given coordinates.
-	pub fn get_pixel(self: *const Channel, depth: u8, width: u16, height: u16, x: u16, y: u16) ![]u8 {
-		if (depthIsValid(depth) == false) { return error.InvalidColorDepth; }
-		const i: u32 = self.pixelIndex(depth, width, height, x, y);
-		return self.bytes[i..i + depth]; } };
+	pub fn getPixel(self: *const Channel, width: u16, height: u16, x: u16, y: u16) !u8 {
+		const i: u32 = self.pixelIndex(width, height, x, y);
+		return self.bytes[i]; } };
 
 /// An image buffer.
 pub const Buffer = struct {
@@ -151,14 +171,12 @@ pub const Buffer = struct {
 	width:      u16 = 0,
 	/// The height in pixels of this buffer.
 	height:     u16 = 0,
-	/// The color-depth of the channels of this buffer.
-	depth:      u8 = 0,
 
 	pub fn print(self: *const Buffer) !void {
-		std.debug.print("Buffer: [ n_channels = {d}, width = {d}, height = {d}, depth = {d} ]\n", .{ self.n_channels, self.width, self.height, self.depth }); }
+		std.debug.print("Buffer: [ n_channels = {d}, width = {d}, height = {d} ]\n", .{ self.n_channels, self.width, self.height }); }
 
 	/// Allocate and initialize a new `Buffer`.
-	pub fn new(width: u16, height: u16, n_channels: u8, depth: u8, allocator: std.mem.Allocator) !Buffer {
+	pub fn new(width: u16, height: u16, n_channels: u8, allocator: std.mem.Allocator) !Buffer {
 		var buffer: Buffer = .{
 			.channels = [4]Channel{
 				try Channel.empty(),
@@ -167,33 +185,33 @@ pub const Buffer = struct {
 				try Channel.empty() },
 			.n_channels = n_channels,
 			.width = width,
-			.height = height,
-			.depth = depth };
+			.height = height };
 		for (0..4) |i| {
-			buffer.channels[i] = try Channel.new(width, height, depth, allocator); }
+			buffer.channels[i] = try Channel.new(width, height, allocator); }
 		return buffer; }
 
 	/// Fill the given `Buffer` uniformly with a given value.
 	pub fn fill(self: *const Buffer, value: []u8) noreturn {
-		std.debug.assert(value.len == self.depth * self.n_channels);
+		std.debug.assert(value.len == self.n_channels);
 		for (0..self.n_channels) |i| {
-			self.channels[i].fill(self.depth, value[self.depth * i..self.depth * (i + 1)]); } }
+			self.channels[i].fill(value[i]); } }
 
 	/// Get the index of the pixel at the given coordinates.
-	pub fn pixelIndex(depth: u8, width: u16, x: u16, y: u16) u32 {
-		return Channel.pixelIndex(depth, width, x, y); }
+	pub fn pixelIndex(width: u16, x: u16, y: u16) u32 {
+		return Channel.pixelIndex(width, x, y); }
 
 	/// Set the color/value of the pixel at the given coordinates.
-	pub fn setPixelColor(self: *const Buffer, x: u16, y: u16, color: Color) !void {
+	pub fn setPixelColor(self: *const Buffer, x: u16, y: u16, anycolor: AnyColor) !void {
 		for (0..self.n_channels) |i| {
-			self.channels[i].set_pixel(self.depth, self.width, self.height, x, y, color.bytes[i * self.depth..(i + 1) * self.depth]); } }
+			self.channels[i].setPixel(self.width, self.height, x, y, anycolor.color[i]); } }
 
 	/// Get the color/value of the pixel at the given coordinates.
-	pub fn getPixelColor(self: *const Buffer, x: u16, y: u16) !Color {
-		var color: Color = .{ };
+	pub fn getPixelColor(self: *const Buffer, x: u16, y: u16) !AnyColor {
+		var anycolor: AnyColor = .{ };
 		for (0..self.n_channels) |i| {
-			@memcpy(color.bytes[i * self.depth..(i + 1) * self.depth], self.channels[i].get_pixel(self.depth, self.width, self.height, x, y)); }
-		return color; }
+			@memcpy(anycolor.color[i], self.channels[i].getPixel(self.width, self.height, x, y)); }
+		anycolor.n_channels = self.n_channels;
+		return anycolor; }
 
 	const QOI_HEADER_SIZE: u32 = 14;
 	const QOI_PADDING: [8]u8 = .{ 0, 0, 0, 0, 0, 0, 0, 1};
@@ -233,7 +251,7 @@ pub const Buffer = struct {
 		const n_channels: u8 = bytes[p]; p += 1;
 		if (nChannelsIsValid(n_channels) == false) { return error.InvalidQOI; }
 		for (0..n_channels) |i| {
-			buffer.channels[i] = try Channel.new(@intCast(width), @intCast(height), 1, allocator); }
+			buffer.channels[i] = try Channel.new(@intCast(width), @intCast(height), allocator); }
 		const colorspace: u8 = bytes[p]; p += 1;
 		if (colorspace > 1) { return error.InvalidQOI; }
 		const max_size: u32 = width * height * (n_channels + 1) + QOI_HEADER_SIZE + @as(u32, QOI_PADDING.len);
@@ -279,8 +297,16 @@ pub const Buffer = struct {
 			buffer.channels[B].bytes[i] = px[B];
 			if (n_channels == 4) { buffer.channels[A].bytes[i] = px[A]; }
 			i += 1; }
-		return error.ValidQOI; } };
+		return error.ValidQOI; }
 
+	/// Draw a `Buffer` over the given `Buffer`. The two buffers must have the same dimensions.
+	pub fn drawBuffer(self: *const Buffer, buffer: *const Buffer, blend_mode: BlendMode) !void {
+		if (blend_mode != .COPY) { return error.Unimplemented; }
+		if ((self.width != buffer.width) or
+			(self.height != buffer.height) or
+			(self.n_channels != buffer.n_channels)) { return error.BufferMismatch; }
+		for (0..self.width) |x| { for (0..self.width) |y| {
+			try self.setPixelColor(x, y, self.getPixelColor(x, y).blendAdd(buffer.getPixelColor(x, y))); } } } };
 
 fn windowProc(hwnd: win32.HWND, uMsg: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(.c) win32.LRESULT {
 	switch (uMsg) {
@@ -309,7 +335,6 @@ pub const WindowConfig = struct {
 	name:      [*]const u8 = "Flint Application\x00",
 	width:     u16 = 1280,
 	height:    u16 = 720,
-	depth:     u8 = 1,
 	allocator: std.mem.Allocator };
 
 /// A window with a buffer.
@@ -317,7 +342,6 @@ pub const Window = struct {
 	h_wnd:     win32.HWND = 0,
 	width:     u16,
 	height:    u16,
-	depth:     u8,
 	allocator: std.mem.Allocator,
 	buffer:    Buffer,
 
@@ -326,9 +350,8 @@ pub const Window = struct {
 		var window: Window = .{
 			.width = config.width,
 			.height = config.height,
-			.depth = config.depth,
 			.allocator = config.allocator,
-			.buffer = try Buffer.new(config.width, config.height, 4, config.depth, config.allocator) };
+			.buffer = try Buffer.new(config.width, config.height, 4, config.allocator) };
 		const h_instance: win32.HINSTANCE = @ptrCast(win32.GetModuleHandleA(null));
 		if (h_instance == null) { return error.NullHandle; }
 		const wnd_class_name: [*]const u8 = "Flint Window\x00";
@@ -388,9 +411,9 @@ pub const BlendMode = enum {
 	/// The *foreground* is added to the *background*.
 	ADD,
 	/// The *foreground* is subtracted from the *background*.
-	SUBTRACT,
+	SUB,
 	/// The *foreground* and the *background* are multiplied.
-	MULTIPLY,
+	MUL,
 	/// The higher value among the *foreground* and the *background* is taken.
 	MAX,
 	/// The lower value among the *foreground* and the *background* is taken.

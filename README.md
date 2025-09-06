@@ -12,4 +12,4 @@ Software renderer for simple 2D games.
 
 # How-to
 
-To open the documentation execute `make doc` from inside `/src` and go to `http://localhost:8000/`.
+To open the documentation execute `make doc-host` from inside `flint/src` and go to `http://localhost:8000/`.
