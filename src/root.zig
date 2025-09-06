@@ -137,10 +137,10 @@ pub const Channel = struct {
 			.bytes = try allocator.alloc(u8, @as(u32, width) * @as(u32, height)) };
 		return channel; }
 
-	/// Fill the given `Channel` uniformly with a given `Color`.
-	pub fn fill(channel: *const Channel, color: Color) noreturn {
+	/// Fill the given `Channel` uniformly with a given value.
+	pub fn fill(channel: *const Channel, value: u8) !void {
 		for (0..channel.bytes.len) |i| {
-			channel.bytes[i] = color.bytes[i]; } }
+			channel.bytes[i] = value; } }
 
 	/// Fill the given `Channel` with zeroes.
 	pub fn clear(channel: *const Channel) noreturn {
@@ -148,17 +148,17 @@ pub const Channel = struct {
 			channel.bytes[i] = 0; } }
 
 	/// Get the index of the pixel at the given coordinates.
-	pub fn pixelIndex(width: u16, x: u16, y: u16) u32 {
-		return y * width + x; }
+	pub fn pixelIndex(width: u16, _: u16, x: u16, y: u16) u32 {
+		return @as(u32, y) * @as(u32, width) + @as(u32, x); }
 
 	/// Set the value of the pixel at the given coordinates.
 	pub fn setPixel(self: *const Channel, width: u16, height: u16, x: u16, y: u16, value: u8) !void {
-		const i: u32 = self.pixelIndex(width, height, x, y);
+		const i: u32 = Channel.pixelIndex(width, height, x, y);
 		@memcpy(self.bytes[i], value); }
 
 	/// Get the value of the pixel at the given coordinates.
 	pub fn getPixel(self: *const Channel, width: u16, height: u16, x: u16, y: u16) !u8 {
-		const i: u32 = self.pixelIndex(width, height, x, y);
+		const i: u32 = Channel.pixelIndex(width, height, x, y);
 		return self.bytes[i]; } };
 
 /// An image buffer.
@@ -188,16 +188,20 @@ pub const Buffer = struct {
 			.height = height };
 		for (0..4) |i| {
 			buffer.channels[i] = try Channel.new(width, height, allocator); }
+		// DICK
+		const fillcolor_array: [4]u8 = .{ 255, 0, 0, 255 };
+		const fillcolor_slice: []u8 = @constCast(&fillcolor_array);
+		try buffer.fill(fillcolor_slice);
 		return buffer; }
 
 	/// Fill the given `Buffer` uniformly with a given value.
-	pub fn fill(self: *const Buffer, value: []u8) noreturn {
+	pub fn fill(self: *const Buffer, value: []u8) !void {
 		std.debug.assert(value.len == self.n_channels);
 		for (0..self.n_channels) |i| {
-			self.channels[i].fill(value[i]); } }
+			try self.channels[i].fill(value[i]); } }
 
 	/// Get the index of the pixel at the given coordinates.
-	pub fn pixelIndex(width: u16, x: u16, y: u16) u32 {
+	pub fn pixelIndex(width: u16, _: u16, x: u16, y: u16) u32 {
 		return Channel.pixelIndex(width, x, y); }
 
 	/// Set the color/value of the pixel at the given coordinates.
@@ -209,7 +213,8 @@ pub const Buffer = struct {
 	pub fn getPixelColor(self: *const Buffer, x: u16, y: u16) !AnyColor {
 		var anycolor: AnyColor = .{ };
 		for (0..self.n_channels) |i| {
-			@memcpy(anycolor.color[i], self.channels[i].getPixel(self.width, self.height, x, y)); }
+			anycolor.color[i] = try self.channels[i].getPixel(self.width, self.height, x, y); }
+			// @memcpy(anycolor.color[i], self.channels[i].getPixel(self.width, self.height, x, y)); }
 		anycolor.n_channels = self.n_channels;
 		return anycolor; }
 
@@ -297,7 +302,10 @@ pub const Buffer = struct {
 			buffer.channels[B].bytes[i] = px[B];
 			if (n_channels == 4) { buffer.channels[A].bytes[i] = px[A]; }
 			i += 1; }
-		return error.ValidQOI; }
+		buffer.width = @intCast(width);
+		buffer.height = @intCast(height);
+		buffer.n_channels = n_channels;
+		return buffer; }
 
 	/// Draw a `Buffer` over the given `Buffer`. The two buffers must have the same dimensions.
 	pub fn drawBuffer(self: *const Buffer, buffer: *const Buffer, blend_mode: BlendMode) !void {
@@ -307,6 +315,46 @@ pub const Buffer = struct {
 			(self.n_channels != buffer.n_channels)) { return error.BufferMismatch; }
 		for (0..self.width) |x| { for (0..self.width) |y| {
 			try self.setPixelColor(x, y, self.getPixelColor(x, y).blendAdd(buffer.getPixelColor(x, y))); } } } };
+
+/// Array-of-structs pixel data, in BGRA order.
+pub const Bitmap = struct {
+	/// The contents of this bitmap.
+	bytes:      []u8,
+	/// The width in pixels of this bitmap.
+	width:      u16 = 0,
+	/// The height in pixels of this bitmap.
+	height:     u16 = 0,
+	/// The number of channels of this bitmap. Can have up to 4.
+	n_channels: u8 = 0,
+
+	pub fn new(width: u16, height: u16, n_channels: u8, allocator: std.mem.Allocator) !Bitmap {
+		return .{
+			.bytes = try allocator.alloc(u8, @as(usize, width) * @as(usize, height) * @as(usize, n_channels)),
+			.width = width, .height = height, .n_channels = n_channels }; }
+
+	pub fn newFromBuffer(buffer: *const Buffer, allocator: std.mem.Allocator) !Bitmap {
+		var bitmap: Bitmap = try Bitmap.new(buffer.width, buffer.height, buffer.n_channels, allocator);
+		var i: u32 = 0;
+		for (0..bitmap.width) |x| { for (0..bitmap.height) |y| {
+			const anycolor = try buffer.getPixelColor(@intCast(x), @intCast(y));
+			switch (bitmap.n_channels) {
+				1 => {
+					bitmap.bytes[i + 0] = anycolor.color[0];
+					i += 1; },
+				3 => {
+					bitmap.bytes[i + 0] = anycolor.color[B];
+					bitmap.bytes[i + 1] = anycolor.color[G];
+					bitmap.bytes[i + 2] = anycolor.color[R];
+					i += 3; },
+				4 => {
+					bitmap.bytes[i + 0] = anycolor.color[B];
+					bitmap.bytes[i + 1] = anycolor.color[G];
+					bitmap.bytes[i + 2] = anycolor.color[R];
+					bitmap.bytes[i + 3] = anycolor.color[A];
+					i += 4; },
+				else => return error.UnsupportedChannelCount } } }
+		return bitmap; }
+};
 
 fn windowProc(hwnd: win32.HWND, uMsg: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(.c) win32.LRESULT {
 	switch (uMsg) {
@@ -340,6 +388,7 @@ pub const WindowConfig = struct {
 /// A window with a buffer.
 pub const Window = struct {
 	h_wnd:     win32.HWND = 0,
+	h_dc:      win32.HDC = 0,
 	width:     u16,
 	height:    u16,
 	allocator: std.mem.Allocator,
@@ -390,6 +439,8 @@ pub const Window = struct {
 		if (window.h_wnd == null) {
 			std.debug.print("ERROR: {d}\n", .{ win32.GetLastError() });
 			return error.CreateWindowFailed; }
+		window.h_dc = win32.GetDC(window.h_wnd);
+		if (window.h_dc == null) { return error.CreateWindowFailed; }
 		return window; }
 
 	/// Collect events from the given `Window`. Returns `false` when the `Window` is closed.
@@ -400,6 +451,38 @@ pub const Window = struct {
 		_ = win32.TranslateMessage(&msg);
 		_ = win32.DispatchMessageA(&msg);
 		return true; }
+
+	/// Draw the window `Buffer` to the window. The window is not updated automatically, you must call `draw` whenever you update the buffer and want the changes to take effect.
+	pub fn draw(self: *const Window) !void {
+		// TODO Move all this stuff inside the WM_PAINT message, and here just call `RedrawWindow`.
+		const bitmap: Bitmap = try Bitmap.newFromBuffer(&self.buffer, self.allocator);
+		const info_header = win32.BITMAPINFOHEADER{
+			.biSize = @sizeOf(win32.BITMAPINFOHEADER),
+			.biWidth = bitmap.width,
+			.biHeight = bitmap.height, // make negative for top-down ordering.
+			.biPlanes = 1,
+			.biBitCount = 8 * bitmap.n_channels,
+			.biCompression = win32.BI_RGB,
+			.biSizeImage = 0,
+			.biXPelsPerMeter = 0,
+			.biYPelsPerMeter = 0,
+			.biClrUsed = 0,
+			.biClrImportant = 0 };
+		const n_bytes: usize = @as(usize, bitmap.width) * @as(usize, bitmap.height) * @as(usize, bitmap.n_channels);
+		const h_dc_mem: win32.HDC = win32.CreateCompatibleDC(self.h_dc);
+		defer _ = win32.DeleteDC(h_dc_mem);
+		if (h_dc_mem == null) { return error.BAD; }
+		var bitmap_ptr: ?*anyopaque = null; // *void
+		const h_bitmap = win32.CreateDIBSection(self.h_dc, @ptrCast(&info_header), win32.DIB_RGB_COLORS, &bitmap_ptr, null, 0);
+		const nonnull_bitmap_ptr: *anyopaque = bitmap_ptr orelse return error.NullPtr;
+		const bitmap_bytes: []u8 = @as([*]u8, @ptrCast(nonnull_bitmap_ptr))[0..n_bytes];
+		defer _ = win32.DeleteObject(h_bitmap);
+		if (h_bitmap == null) { return error.BAD; }
+		@memcpy(bitmap_bytes, bitmap.bytes[0..n_bytes]);
+		const h_old_bitmap = win32.SelectObject(h_dc_mem, h_bitmap);
+		defer _ = win32.SelectObject(h_dc_mem, h_old_bitmap);
+		_ = win32.StretchBlt(self.h_dc, 0, 0, self.width, self.height, h_dc_mem, 0, 0, bitmap.width, bitmap.height, win32.SRCCOPY);
+	}
 };
 
 

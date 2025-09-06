@@ -19,4 +19,5 @@ pub fn main() !void {
 	std.debug.print("{s}\n", .{qoi_bytes});
 	_ = bytes_read;
 	_ = try flint.Buffer.newFromQOI(qoi_bytes, allocator);
-	while (window.poll()) { } }
+	while (window.poll()) {
+		try window.draw(); } }
