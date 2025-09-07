@@ -15,10 +15,6 @@ pub fn main() !void {
 	std.debug.print("Flint version {s}.\n", .{ flint.VERSION_STRING });
 	const wnd_name: [*]const u8 = "Flint\x00";
 	var window: *flint.Window = try flint.Window.new(.{ .name = wnd_name, .width = 1344, .height = 896, .allocator = allocator }, allocator);
-
-	const window_ptr: *flint.Window = @ptrFromInt(@as(usize, @intCast(win32.GetWindowLongPtrA(@ptrCast(window.h_wnd), win32.GWLP_USERDATA))));
-	std.debug.assert(window_ptr == window);
-
 	const anycolor = try flint.AnyColor.newRGBA(0, 0, 0, 1);
 	try window.buffer.fill(anycolor);
 	const qoi_file = try std.fs.cwd().openFile("./image.qoi", .{});

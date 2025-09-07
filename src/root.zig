@@ -423,11 +423,79 @@ fn windowProc(hwnd: win32.HWND, uMsg: u32, wParam: win32.WPARAM, lParam: win32.L
 			window.mouseState.positionY = @as(u16, @intCast((lParam >> 16) & 0xFFFF)); return 0; },
 		win32.WM_MOUSEWHEEL => {
 			window.mouseState.wheelDelta = @as(u16, @intCast((wParam >> 16) & 0xFFFF)); return 0; },
-    	win32.WM_SETCURSOR => {
-    		if (@as(u16, @intCast(lParam & 0xFFFF)) == win32.HTCLIENT) {
-    			_ = win32.SetCursor(win32.LoadCursorA(null, IDC_CROSS));
-    			return 0; }
-    		return win32.DefWindowProcA(hwnd, uMsg, wParam, lParam); },
+		win32.WM_SETCURSOR => {
+			if (@as(u16, @intCast(lParam & 0xFFFF)) == win32.HTCLIENT) {
+				_ = win32.SetCursor(win32.LoadCursorA(null, IDC_CROSS));
+				return 0; }
+			return win32.DefWindowProcA(hwnd, uMsg, wParam, lParam); },
+		// std.meta.fieldIndex(flint.KeyboardState, "d") orelse 0
+		win32.WM_KEYDOWN, win32.WM_KEYUP => {
+			const keyState: u1 = if (uMsg == win32.WM_KEYDOWN) 1 else 0;
+			switch (wParam) {
+				'A'               => window.keyboardState.a          = keyState,
+				'B'               => window.keyboardState.b          = keyState,
+				'C'               => window.keyboardState.c          = keyState,
+				'D'               => window.keyboardState.d          = keyState,
+				'E'               => window.keyboardState.e          = keyState,
+				'F'               => window.keyboardState.f          = keyState,
+				'G'               => window.keyboardState.g          = keyState,
+				'H'               => window.keyboardState.h          = keyState,
+				'I'               => window.keyboardState.i          = keyState,
+				'J'               => window.keyboardState.j          = keyState,
+				'K'               => window.keyboardState.k          = keyState,
+				'L'               => window.keyboardState.l          = keyState,
+				'M'               => window.keyboardState.m          = keyState,
+				'N'               => window.keyboardState.n          = keyState,
+				'O'               => window.keyboardState.o          = keyState,
+				'P'               => window.keyboardState.p          = keyState,
+				'Q'               => window.keyboardState.q          = keyState,
+				'R'               => window.keyboardState.r          = keyState,
+				'S'               => window.keyboardState.s          = keyState,
+				'T'               => window.keyboardState.t          = keyState,
+				'U'               => window.keyboardState.u          = keyState,
+				'V'               => window.keyboardState.v          = keyState,
+				'W'               => window.keyboardState.w          = keyState,
+				'X'               => window.keyboardState.x          = keyState,
+				'Y'               => window.keyboardState.y          = keyState,
+				'Z'               => window.keyboardState.z          = keyState,
+				'0'               => window.keyboardState.n0         = keyState,
+				'1'               => window.keyboardState.n1         = keyState,
+				'2'               => window.keyboardState.n2         = keyState,
+				'3'               => window.keyboardState.n3         = keyState,
+				'4'               => window.keyboardState.n4         = keyState,
+				'5'               => window.keyboardState.n5         = keyState,
+				'6'               => window.keyboardState.n6         = keyState,
+				'7'               => window.keyboardState.n7         = keyState,
+				'8'               => window.keyboardState.n8         = keyState,
+				'9'               => window.keyboardState.n9         = keyState,
+				win32.VK_LCONTROL => window.keyboardState.leftCtrl   = keyState,
+				win32.VK_LWIN     => window.keyboardState.leftSuper  = keyState,
+				win32.VK_LMENU    => window.keyboardState.leftAlt    = keyState,
+				win32.VK_LSHIFT   => window.keyboardState.leftShift  = keyState,
+				win32.VK_RCONTROL => window.keyboardState.rightCtrl  = keyState,
+				win32.VK_RWIN     => window.keyboardState.rightSuper = keyState,
+				win32.VK_RMENU    => window.keyboardState.rightAlt   = keyState,
+				win32.VK_RSHIFT   => window.keyboardState.rightShift = keyState,
+				win32.VK_SPACE    => window.keyboardState.space      = keyState,
+				win32.VK_TAB      => window.keyboardState.tab        = keyState,
+				win32.VK_CAPITAL  => window.keyboardState.capsLock   = keyState,
+				win32.VK_ESCAPE   => window.keyboardState.escape     = keyState,
+				win32.VK_RETURN   => window.keyboardState.enter      = keyState,
+				win32.VK_BACK     => window.keyboardState.backspace  = keyState,
+				win32.VK_F1       => window.keyboardState.f1         = keyState,
+				win32.VK_F2       => window.keyboardState.f2         = keyState,
+				win32.VK_F3       => window.keyboardState.f3         = keyState,
+				win32.VK_F4       => window.keyboardState.f4         = keyState,
+				win32.VK_F5       => window.keyboardState.f5         = keyState,
+				win32.VK_F6       => window.keyboardState.f6         = keyState,
+				win32.VK_F7       => window.keyboardState.f7         = keyState,
+				win32.VK_F8       => window.keyboardState.f8         = keyState,
+				win32.VK_F9       => window.keyboardState.f9         = keyState,
+				win32.VK_F10      => window.keyboardState.f10        = keyState,
+				win32.VK_F11      => window.keyboardState.f11        = keyState,
+				win32.VK_F12      => window.keyboardState.f12        = keyState,
+				else => {} }
+			return 0; },
 		else => {}, }
 	return win32.DefWindowProcA(hwnd, uMsg, wParam, lParam); }
 
@@ -452,7 +520,7 @@ pub const WindowConfig = struct {
 	height:    u16 = 720,
 	allocator: std.mem.Allocator };
 
-const MouseState = packed struct {
+pub const MouseState = packed struct {
 	leftButton:   u1 = 0,
 	middleButton: u1 = 0,
 	rightButton:  u1 = 0,
@@ -460,6 +528,70 @@ const MouseState = packed struct {
 	positionX:    u16 = 0,
 	positionY:    u16 = 0,
 	wheelDelta:   u32 = 0 };
+
+pub const KeyboardState = packed struct {
+	a:          u1 = 0,
+	b:          u1 = 0,
+	c:          u1 = 0,
+	d:          u1 = 0,
+	e:          u1 = 0,
+	f:          u1 = 0,
+	g:          u1 = 0,
+	h:          u1 = 0,
+	i:          u1 = 0,
+	j:          u1 = 0,
+	k:          u1 = 0,
+	l:          u1 = 0,
+	m:          u1 = 0,
+	n:          u1 = 0,
+	o:          u1 = 0,
+	p:          u1 = 0,
+	q:          u1 = 0,
+	r:          u1 = 0,
+	s:          u1 = 0,
+	t:          u1 = 0,
+	u:          u1 = 0,
+	v:          u1 = 0,
+	w:          u1 = 0,
+	x:          u1 = 0,
+	y:          u1 = 0,
+	z:          u1 = 0,
+	n0:         u1 = 0,
+	n1:         u1 = 0,
+	n2:         u1 = 0,
+	n3:         u1 = 0,
+	n4:         u1 = 0,
+	n5:         u1 = 0,
+	n6:         u1 = 0,
+	n7:         u1 = 0,
+	n8:         u1 = 0,
+	n9:         u1 = 0,
+	leftCtrl:   u1 = 0,
+	leftSuper:  u1 = 0,
+	leftAlt:    u1 = 0,
+	leftShift:  u1 = 0,
+	rightCtrl:  u1 = 0,
+	rightSuper: u1 = 0,
+	rightAlt:   u1 = 0,
+	rightShift: u1 = 0,
+	space:      u1 = 0,
+	tab:        u1 = 0,
+	capsLock:   u1 = 0,
+	escape:     u1 = 0,
+	enter:      u1 = 0,
+	backspace:  u1 = 0,
+	f1:         u1 = 0,
+	f2:         u1 = 0,
+	f3:         u1 = 0,
+	f4:         u1 = 0,
+	f5:         u1 = 0,
+	f6:         u1 = 0,
+	f7:         u1 = 0,
+	f8:         u1 = 0,
+	f9:         u1 = 0,
+	f10:        u1 = 0,
+	f11:        u1 = 0,
+	f12:        u1 = 0 };
 
 /// A window with a buffer. This is the only platform-dependent component of Flint.
 pub const Window = struct {
@@ -469,8 +601,8 @@ pub const Window = struct {
 	height:        u16 = 729,
 	allocator:     std.mem.Allocator,
 	buffer:        Buffer,
-	mouseState:    MouseState,
-	// keyboardState: KeyboardState,
+	mouseState:    MouseState = .{},
+	keyboardState: KeyboardState = .{},
 
 	/// Allocate and initialize a new `Window`.
 	pub fn new(config: WindowConfig, allocator: std.mem.Allocator) !*Window {
@@ -479,8 +611,7 @@ pub const Window = struct {
 			.width = config.width,
 			.height = config.height,
 			.allocator = config.allocator,
-			.buffer = try Buffer.new(config.width, config.height, 4, config.allocator),
-			.mouseState = .{} };
+			.buffer = try Buffer.new(config.width, config.height, 4, config.allocator) };
 		const h_instance: win32.HINSTANCE = @ptrCast(win32.GetModuleHandleA(null));
 		if (h_instance == null) { return error.NullHandle; }
 		const wnd_class_name: [*]const u8 = "Flint Window\x00";
@@ -523,43 +654,42 @@ pub const Window = struct {
 		const window_ptr: *Window = @ptrFromInt(@as(usize, @intCast(win32.GetWindowLongPtrA(window.h_wnd, win32.GWLP_USERDATA))));
 		std.debug.assert(window_ptr == window);
 		window.h_dc = win32.GetDC(window.h_wnd);
-        std.debug.print("________________________________________\n", .{});
+		std.debug.print("________________________________________\n", .{});
 		if (window.h_dc == null) { return error.CreateWindowFailed; }
 		return window; }
 
 	/// Collect events from the given `Window`. Returns `false` when the `Window` is closed.
-	pub fn poll(self: *const Window) bool {
+	pub fn poll(_: *const Window) bool {
 		var msg: win32.MSG = std.mem.zeroes(win32.MSG);
 		const window_opened: i32 = win32.GetMessageA(&msg, null, 0, 0);
 		if (window_opened == 0) { return false; }
 		_ = win32.TranslateMessage(&msg);
 		_ = win32.DispatchMessageA(&msg);
-		std.debug.print("MOUSE {d}, {d}\n", .{ self.mouseState.positionX, self.mouseState.positionY });
 		return true; }
 
 	/// Draw the window `Buffer` to the window. The window is not updated automatically, you must call `draw` whenever you update the buffer and want the changes to take effect.
 	pub fn draw(self: *const Window) !void {
 		// TODO Move all this stuff inside the WM_PAINT message, and here just call `RedrawWindow`.
 
-        // std.debug.print("BLACK: {d} {d} {d}\n", .{
-        // self.buffer.channels[0].bytes[0],
-        // self.buffer.channels[1].bytes[0],
-        // self.buffer.channels[2].bytes[0] });
+		// std.debug.print("BLACK: {d} {d} {d}\n", .{
+		// self.buffer.channels[0].bytes[0],
+		// self.buffer.channels[1].bytes[0],
+		// self.buffer.channels[2].bytes[0] });
 
-        // std.debug.print("RED: {d} {d} {d}\n", .{
-        // self.buffer.channels[0].bytes[4],
-        // self.buffer.channels[1].bytes[4],
-        // self.buffer.channels[2].bytes[4] });
+		// std.debug.print("RED: {d} {d} {d}\n", .{
+		// self.buffer.channels[0].bytes[4],
+		// self.buffer.channels[1].bytes[4],
+		// self.buffer.channels[2].bytes[4] });
 
-        // std.debug.print("GREEN: {d} {d} {d}\n", .{
-        // self.buffer.channels[0].bytes[8],
-        // self.buffer.channels[1].bytes[8],
-        // self.buffer.channels[2].bytes[8] });
+		// std.debug.print("GREEN: {d} {d} {d}\n", .{
+		// self.buffer.channels[0].bytes[8],
+		// self.buffer.channels[1].bytes[8],
+		// self.buffer.channels[2].bytes[8] });
 
-        // std.debug.print("BLUE: {d} {d} {d}\n", .{
-        // self.buffer.channels[0].bytes[12],
-        // self.buffer.channels[1].bytes[12],
-        // self.buffer.channels[2].bytes[12] });
+		// std.debug.print("BLUE: {d} {d} {d}\n", .{
+		// self.buffer.channels[0].bytes[12],
+		// self.buffer.channels[1].bytes[12],
+		// self.buffer.channels[2].bytes[12] });
 					// if ((i == 0) or (i == 4) or (i == 8) or (i == 12)) { std.debug.print("PX: {d} {d} {d} {d}\n", .{px[R], px[G], px[B], px[A]}); }
 
 
