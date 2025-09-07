@@ -135,6 +135,7 @@ pub const Channel = struct {
 	pub fn new(width: u16, height: u16, allocator: std.mem.Allocator) !Channel {
 		const channel: Channel = .{
 			.bytes = try allocator.alloc(u8, @as(u32, width) * @as(u32, height)) };
+		@memset(channel.bytes, 0);
 		return channel; }
 
 	/// Fill the given `Channel` uniformly with a given value.
@@ -148,16 +149,20 @@ pub const Channel = struct {
 			channel.bytes[i] = 0; } }
 
 	/// Get the index of the pixel at the given coordinates.
-	pub fn pixelIndex(width: u16, _: u16, x: u16, y: u16) u32 {
+	pub fn pixelIndex(width: u16, height: u16, x: u16, y: u16) u32 {
+		std.debug.assert((x < width) and (y < height));
+		// std.debug.print("INDEX: {d} x {d} -> {d}\n", .{ x, y, @as(u32, y) * @as(u32, width) + @as(u32, x) });
 		return @as(u32, y) * @as(u32, width) + @as(u32, x); }
 
 	/// Set the value of the pixel at the given coordinates.
 	pub fn setPixel(self: *const Channel, width: u16, height: u16, x: u16, y: u16, value: u8) !void {
+		std.debug.assert((x < width) and (y < height));
 		const i: u32 = Channel.pixelIndex(width, height, x, y);
 		self.bytes[i] = value; }
 
 	/// Get the value of the pixel at the given coordinates.
 	pub fn getPixel(self: *const Channel, width: u16, height: u16, x: u16, y: u16) !u8 {
+		std.debug.assert((x < width) and (y < height));
 		const i: u32 = Channel.pixelIndex(width, height, x, y);
 		return self.bytes[i]; } };
 
@@ -175,6 +180,18 @@ pub const Buffer = struct {
 	pub fn print(self: *const Buffer) !void {
 		std.debug.print("Buffer: [ n_channels = {d}, width = {d}, height = {d} ]\n", .{ self.n_channels, self.width, self.height }); }
 
+	pub fn empty() !Buffer {
+		const buffer: Buffer = .{
+			.channels = [4]Channel{
+				try Channel.empty(),
+				try Channel.empty(),
+				try Channel.empty(),
+				try Channel.empty() },
+			.n_channels = 0,
+			.width = 0,
+			.height = 0 };
+		return buffer; }
+
 	/// Allocate and initialize a new `Buffer`.
 	pub fn new(width: u16, height: u16, n_channels: u8, allocator: std.mem.Allocator) !Buffer {
 		var buffer: Buffer = .{
@@ -186,23 +203,21 @@ pub const Buffer = struct {
 			.n_channels = n_channels,
 			.width = width,
 			.height = height };
-		for (0..4) |i| {
+		for (0..n_channels) |i| {
+			std.debug.print("I = {d}\n", .{i});
 			buffer.channels[i] = try Channel.new(width, height, allocator); }
-		// DICK
-		const fillcolor_array: [4]u8 = .{ 255, 0, 0, 255 };
-		const fillcolor_slice: []u8 = @constCast(&fillcolor_array);
-		try buffer.fill(fillcolor_slice);
 		return buffer; }
 
 	/// Fill the given `Buffer` uniformly with a given value.
-	pub fn fill(self: *const Buffer, value: []u8) !void {
-		std.debug.assert(value.len == self.n_channels);
+	pub fn fill(self: *const Buffer, anycolor: AnyColor) !void {
+		std.debug.assert(anycolor.n_channels == self.n_channels);
 		for (0..self.n_channels) |i| {
-			try self.channels[i].fill(value[i]); } }
+			try self.channels[i].fill(anycolor.color[i]); } }
 
 	/// Get the index of the pixel at the given coordinates.
-	pub fn pixelIndex(width: u16, _: u16, x: u16, y: u16) u32 {
-		return Channel.pixelIndex(width, x, y); }
+	pub fn pixelIndex(width: u16, height: u16, x: u16, y: u16) u32 {
+		std.debug.assert((x < width) and (y < height));
+		return Channel.pixelIndex(width, height, x, y); }
 
 	/// Set the color/value of the pixel at the given coordinates.
 	pub fn setPixelColor(self: *const Buffer, x: u16, y: u16, anycolor: AnyColor) !void {
@@ -211,6 +226,7 @@ pub const Buffer = struct {
 
 	/// Get the color/value of the pixel at the given coordinates.
 	pub fn getPixelColor(self: *const Buffer, x: u16, y: u16) !AnyColor {
+		std.debug.assert((x < self.width) and (y < self.height));
 		var anycolor: AnyColor = .{ };
 		for (0..self.n_channels) |i| {
 			anycolor.color[i] = try self.channels[i].getPixel(self.width, self.height, x, y); }
@@ -276,31 +292,43 @@ pub const Buffer = struct {
 				if (b1 == QOI_OP_RGB) {
 					px[R] = bytes[p]; p += 1;
 					px[G] = bytes[p]; p += 1;
-					px[B] = bytes[p]; p += 1; }
+					px[B] = bytes[p]; p += 1;
+					if (i == 0) { std.debug.print("QOI_OP_RGB: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				else if (b1 == QOI_OP_RGBA) {
 					px[R] = bytes[p]; p += 1;
 					px[G] = bytes[p]; p += 1;
 					px[B] = bytes[p]; p += 1;
-					px[A] = bytes[p]; p += 1; }
+					px[A] = bytes[p]; p += 1;
+					if (i == 0) { std.debug.print("QOI_OP_RGBA: {d} {d} {d} {d}\n", .{px[R], px[G], px[B], px[A]}); } }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
-					px = index[@intCast(b1)]; }
+					px = index[@as(u32, @intCast(b1))];
+					if (i == 0) { std.debug.print("QOI_OP_INDEX: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
-					px[R] = px[R] +% ((b1 >> 4) & 0x03) -% 2;
-					px[G] = px[G] +% ((b1 >> 2) & 0x03) -% 2;
-					px[B] = px[B] +% ( b1       & 0x03) -% 2; }
+					px[R] = (px[R] +% ((b1 >> 4) & 0b11)) -% 2;
+					px[G] = (px[G] +% ((b1 >> 2) & 0b11)) -% 2;
+					px[B] = (px[B] +% ((b1 >> 0) & 0b11)) -% 2;
+					if (i == 0) { std.debug.print("QOI_OP_DIFF: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
 					const b2: u8 = bytes[p]; p += 1;
-					const vg: u8 = (b1 & 0x3f) -% 32;
-					px[R] = px[R] +% vg -% 8 +% ((b2 >> 4) & 0x0f);
+					const vg: u8 = (b1 & 0b111111);
+					px[R] = px[R] +% vg;
+					px[R] = px[R] +% ((b2 >> 4) & 0b1111);
+					px[R] = px[R] -% 40;
 					px[G] = px[G] +% vg;
-					px[B] = px[B] +% vg -% 8 +%  (b2       & 0x0f); }
+					px[G] = px[G] -% 32;
+					px[B] = px[B] +% vg;
+					px[R] = px[R] +% ((b2 >> 0) & 0b1111);
+					px[B] = px[B] -% 40;
+					if (i == 0) { std.debug.print("QOI_OP_LUMA: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
-					run = @intCast(b1 & 0x3f); }
+					run = @intCast(b1 & 0x3f);
+					if (i == 0) { std.debug.print("QOI_OP_RUN: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				index[qoiColorHash(px) & (64 - 1)] = px; }
 			buffer.channels[R].bytes[i] = px[R];
 			buffer.channels[G].bytes[i] = px[G];
 			buffer.channels[B].bytes[i] = px[B];
 			if (n_channels == 4) { buffer.channels[A].bytes[i] = px[A]; }
+			if ((i == 0) or (i == 4) or (i == 8) or (i == 12)) { std.debug.print("PX: {d} {d} {d} {d}\n", .{px[R], px[G], px[B], px[A]}); }
 			i += 1; }
 		buffer.width = @intCast(width);
 		buffer.height = @intCast(height);
@@ -314,7 +342,8 @@ pub const Buffer = struct {
 		if ((self.width != buffer.width) or
 			(self.height != buffer.height) or
 			(self.n_channels != buffer.n_channels)) { return error.BufferMismatch; }
-		for (0..self.width) |y| { for (0..self.width) |x| {
+		for (0..self.height) |y| { for (0..self.width) |x| {
+			// std.debug.print("{d} x {d}\n", .{ x, y });
 			try self.setPixelColor(
 				@intCast(x), @intCast(y),
 				(try self.getPixelColor(@intCast(x), @intCast(y))).blendAdd(try buffer.getPixelColor(@intCast(x), @intCast(y)))); } } } };
@@ -331,9 +360,11 @@ pub const Bitmap = struct {
 	n_channels: u8 = 0,
 
 	pub fn new(width: u16, height: u16, n_channels: u8, allocator: std.mem.Allocator) !Bitmap {
-		return .{
+		const bitmap: Bitmap = .{
 			.bytes = try allocator.alloc(u8, @as(usize, width) * @as(usize, height) * @as(usize, n_channels)),
-			.width = width, .height = height, .n_channels = n_channels }; }
+			.width = width, .height = height, .n_channels = n_channels };
+		@memset(bitmap.bytes, 0);
+		return bitmap; }
 
 	pub fn newFromBuffer(buffer: *const Buffer, allocator: std.mem.Allocator) !Bitmap {
 		var bitmap: Bitmap = try Bitmap.new(buffer.width, buffer.height, buffer.n_channels, allocator);
@@ -359,11 +390,44 @@ pub const Bitmap = struct {
 		return bitmap; }
 };
 
+const IDC_ARROW:   [*c]const u8 = @ptrFromInt(32512);
+const IDC_HAND:    [*c]const u8 = @ptrFromInt(32649);
+const IDC_IBEAM:   [*c]const u8 = @ptrFromInt(32513);
+const IDC_WAIT:    [*c]const u8 = @ptrFromInt(32514);
+const IDC_NO:      [*c]const u8 = @ptrFromInt(32648);
+const IDC_CROSS:   [*c]const u8 = @ptrFromInt(32515);
+const IDC_UPARROW: [*c]const u8 = @ptrFromInt(32516);
+
 fn windowProc(hwnd: win32.HWND, uMsg: u32, wParam: win32.WPARAM, lParam: win32.LPARAM) callconv(.c) win32.LRESULT {
+	// This pointer should be non-null only if windowProc is called after the creation, ie if the event is different from WM_CREATE
+	const window_ptr: ?*Window = @ptrFromInt(@as(usize, @intCast(win32.GetWindowLongPtrA(hwnd, win32.GWLP_USERDATA))));
+	const window: *Window = window_ptr orelse {
+	   return win32.DefWindowProcA(hwnd, uMsg, wParam, lParam); };
 	switch (uMsg) {
 		win32.WM_DESTROY => {
-			win32.PostQuitMessage(0);
-			return 0; },
+			win32.PostQuitMessage(0); return 0; },
+		win32.WM_LBUTTONDOWN => {
+			window.mouseState.leftButton = 1; return 0; },
+		win32.WM_LBUTTONUP => {
+			window.mouseState.leftButton = 0; return 0; },
+		win32.WM_MBUTTONDOWN => {
+			window.mouseState.middleButton = 1; return 0; },
+		win32.WM_MBUTTONUP => {
+			window.mouseState.middleButton = 0; return 0; },
+		win32.WM_MOUSEHOVER => {
+			window.mouseState.hover = 1; return 0; },
+		win32.WM_MOUSELEAVE => {
+			window.mouseState.hover = 0; return 0; },
+		win32.WM_MOUSEMOVE => {
+			window.mouseState.positionX = @as(u16, @intCast(lParam & 0xFFFF));
+			window.mouseState.positionY = @as(u16, @intCast((lParam >> 16) & 0xFFFF)); return 0; },
+		win32.WM_MOUSEWHEEL => {
+			window.mouseState.wheelDelta = @as(u16, @intCast((wParam >> 16) & 0xFFFF)); return 0; },
+    	win32.WM_SETCURSOR => {
+    		if (@as(u16, @intCast(lParam & 0xFFFF)) == win32.HTCLIENT) {
+    			_ = win32.SetCursor(win32.LoadCursorA(null, IDC_CROSS));
+    			return 0; }
+    		return win32.DefWindowProcA(hwnd, uMsg, wParam, lParam); },
 		else => {}, }
 	return win32.DefWindowProcA(hwnd, uMsg, wParam, lParam); }
 
@@ -388,22 +452,35 @@ pub const WindowConfig = struct {
 	height:    u16 = 720,
 	allocator: std.mem.Allocator };
 
+const MouseState = packed struct {
+	leftButton:   u1 = 0,
+	middleButton: u1 = 0,
+	rightButton:  u1 = 0,
+	hover:        u1 = 0,
+	positionX:    u16 = 0,
+	positionY:    u16 = 0,
+	wheelDelta:   u32 = 0 };
+
 /// A window with a buffer. This is the only platform-dependent component of Flint.
 pub const Window = struct {
-	h_wnd:     win32.HWND = 0,
-	h_dc:      win32.HDC = 0,
-	width:     u16,
-	height:    u16,
-	allocator: std.mem.Allocator,
-	buffer:    Buffer,
+	h_wnd:         win32.HWND = 0,
+	h_dc:          win32.HDC = 0,
+	width:         u16 = 1280,
+	height:        u16 = 729,
+	allocator:     std.mem.Allocator,
+	buffer:        Buffer,
+	mouseState:    MouseState,
+	// keyboardState: KeyboardState,
 
 	/// Allocate and initialize a new `Window`.
-	pub fn new(config: WindowConfig) !Window {
-		var window: Window = .{
+	pub fn new(config: WindowConfig, allocator: std.mem.Allocator) !*Window {
+		var window: *Window = try allocator.create(Window);
+		window.* = .{
 			.width = config.width,
 			.height = config.height,
 			.allocator = config.allocator,
-			.buffer = try Buffer.new(config.width, config.height, 4, config.allocator) };
+			.buffer = try Buffer.new(config.width, config.height, 4, config.allocator),
+			.mouseState = .{} };
 		const h_instance: win32.HINSTANCE = @ptrCast(win32.GetModuleHandleA(null));
 		if (h_instance == null) { return error.NullHandle; }
 		const wnd_class_name: [*]const u8 = "Flint Window\x00";
@@ -442,22 +519,50 @@ pub const Window = struct {
 		if (window.h_wnd == null) {
 			std.debug.print("ERROR: {d}\n", .{ win32.GetLastError() });
 			return error.CreateWindowFailed; }
+		_ = win32.SetWindowLongPtrA(window.h_wnd, win32.GWLP_USERDATA, @intCast(@as(usize, @intFromPtr(window))));
+		const window_ptr: *Window = @ptrFromInt(@as(usize, @intCast(win32.GetWindowLongPtrA(window.h_wnd, win32.GWLP_USERDATA))));
+		std.debug.assert(window_ptr == window);
 		window.h_dc = win32.GetDC(window.h_wnd);
+        std.debug.print("________________________________________\n", .{});
 		if (window.h_dc == null) { return error.CreateWindowFailed; }
 		return window; }
 
 	/// Collect events from the given `Window`. Returns `false` when the `Window` is closed.
-	pub fn poll(_: *const Window) bool {
+	pub fn poll(self: *const Window) bool {
 		var msg: win32.MSG = std.mem.zeroes(win32.MSG);
 		const window_opened: i32 = win32.GetMessageA(&msg, null, 0, 0);
 		if (window_opened == 0) { return false; }
 		_ = win32.TranslateMessage(&msg);
 		_ = win32.DispatchMessageA(&msg);
+		std.debug.print("MOUSE {d}, {d}\n", .{ self.mouseState.positionX, self.mouseState.positionY });
 		return true; }
 
 	/// Draw the window `Buffer` to the window. The window is not updated automatically, you must call `draw` whenever you update the buffer and want the changes to take effect.
 	pub fn draw(self: *const Window) !void {
 		// TODO Move all this stuff inside the WM_PAINT message, and here just call `RedrawWindow`.
+
+        // std.debug.print("BLACK: {d} {d} {d}\n", .{
+        // self.buffer.channels[0].bytes[0],
+        // self.buffer.channels[1].bytes[0],
+        // self.buffer.channels[2].bytes[0] });
+
+        // std.debug.print("RED: {d} {d} {d}\n", .{
+        // self.buffer.channels[0].bytes[4],
+        // self.buffer.channels[1].bytes[4],
+        // self.buffer.channels[2].bytes[4] });
+
+        // std.debug.print("GREEN: {d} {d} {d}\n", .{
+        // self.buffer.channels[0].bytes[8],
+        // self.buffer.channels[1].bytes[8],
+        // self.buffer.channels[2].bytes[8] });
+
+        // std.debug.print("BLUE: {d} {d} {d}\n", .{
+        // self.buffer.channels[0].bytes[12],
+        // self.buffer.channels[1].bytes[12],
+        // self.buffer.channels[2].bytes[12] });
+					// if ((i == 0) or (i == 4) or (i == 8) or (i == 12)) { std.debug.print("PX: {d} {d} {d} {d}\n", .{px[R], px[G], px[B], px[A]}); }
+
+
 		const bitmap: Bitmap = try Bitmap.newFromBuffer(&self.buffer, self.allocator);
 		const info_header = win32.BITMAPINFOHEADER{
 			.biSize = @sizeOf(win32.BITMAPINFOHEADER),

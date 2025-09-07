@@ -1,5 +1,12 @@
 const std = @import("std");
 const flint = @import("flint");
+const win32 = @cImport({
+	@cInclude("windows.h");
+	@cInclude("windowsx.h");
+	@cInclude("wchar.h");
+	@cInclude("combaseapi.h");
+	@cInclude("commdlg.h");
+	@cInclude("shellapi.h"); });
 
 pub fn main() !void {
     var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
@@ -7,18 +14,21 @@ pub fn main() !void {
     const allocator = arena.allocator();
 	std.debug.print("Flint version {s}.\n", .{ flint.VERSION_STRING });
 	const wnd_name: [*]const u8 = "Flint\x00";
-	const window: flint.Window = try flint.Window.new(.{ .name = wnd_name, .width = 512, .height = 512, .allocator = allocator });
-	const anycolor = try flint.AnyColor.newRGBA(0.5, 0.25, 0.333, 1);
-	std.debug.print("Color: {d}, {d}, {d}, {d}.\n", .{ anycolor.color[0], anycolor.color[1], anycolor.color[2], anycolor.color[3] });
-	try window.buffer.print();
-	const qoi_file = try std.fs.cwd().openFile("../flint.qoi", .{});
+	var window: *flint.Window = try flint.Window.new(.{ .name = wnd_name, .width = 1344, .height = 896, .allocator = allocator }, allocator);
+
+	const window_ptr: *flint.Window = @ptrFromInt(@as(usize, @intCast(win32.GetWindowLongPtrA(@ptrCast(window.h_wnd), win32.GWLP_USERDATA))));
+	std.debug.assert(window_ptr == window);
+
+	const anycolor = try flint.AnyColor.newRGBA(0, 0, 0, 1);
+	try window.buffer.fill(anycolor);
+	const qoi_file = try std.fs.cwd().openFile("./image.qoi", .{});
 	defer qoi_file.close();
 	const qoi_bytes = try allocator.alloc(u8, (try qoi_file.stat()).size);
 	defer allocator.free(qoi_bytes);
-	const bytes_read = try qoi_file.readAll(qoi_bytes);
-	std.debug.print("{s}\n", .{qoi_bytes});
-	_ = bytes_read;
+	_ = try qoi_file.readAll(qoi_bytes);
 	const buffer = try flint.Buffer.newFromQOI(qoi_bytes, allocator);
-	try window.buffer.drawBuffer(&buffer, .COPY);
+	// _ = buffer;
+	window.buffer = buffer;
+	// try window.buffer.drawBuffer(&buffer, .COPY);
 	while (window.poll()) {
 		try window.draw(); } }
