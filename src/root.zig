@@ -314,7 +314,7 @@ pub const Buffer = struct {
 		if ((self.width != buffer.width) or
 			(self.height != buffer.height) or
 			(self.n_channels != buffer.n_channels)) { return error.BufferMismatch; }
-		for (0..self.width) |x| { for (0..self.width) |y| {
+		for (0..self.width) |y| { for (0..self.width) |x| {
 			try self.setPixelColor(
 				@intCast(x), @intCast(y),
 				(try self.getPixelColor(@intCast(x), @intCast(y))).blendAdd(try buffer.getPixelColor(@intCast(x), @intCast(y)))); } } } };
@@ -338,7 +338,7 @@ pub const Bitmap = struct {
 	pub fn newFromBuffer(buffer: *const Buffer, allocator: std.mem.Allocator) !Bitmap {
 		var bitmap: Bitmap = try Bitmap.new(buffer.width, buffer.height, buffer.n_channels, allocator);
 		var i: u32 = 0;
-		for (0..bitmap.width) |x| { for (0..bitmap.height) |y| {
+		for (0..bitmap.height) |y| { for (0..bitmap.width) |x| {
 			const anycolor = try buffer.getPixelColor(@intCast(x), @intCast(y));
 			switch (bitmap.n_channels) {
 				1 => {
@@ -462,7 +462,7 @@ pub const Window = struct {
 		const info_header = win32.BITMAPINFOHEADER{
 			.biSize = @sizeOf(win32.BITMAPINFOHEADER),
 			.biWidth = bitmap.width,
-			.biHeight = bitmap.height, // make negative for top-down ordering.
+			.biHeight = -@as(i32, bitmap.height), // make negative for top-down ordering.
 			.biPlanes = 1,
 			.biBitCount = 8 * bitmap.n_channels,
 			.biCompression = win32.BI_RGB,
