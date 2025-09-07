@@ -7,7 +7,7 @@ pub fn main() !void {
     const allocator = arena.allocator();
 	std.debug.print("Flint version {s}.\n", .{ flint.VERSION_STRING });
 	const wnd_name: [*]const u8 = "Flint\x00";
-	const window: flint.Window = try flint.Window.new(.{ .name = wnd_name, .width = 1280, .height = 720, .allocator = allocator });
+	const window: flint.Window = try flint.Window.new(.{ .name = wnd_name, .width = 512, .height = 512, .allocator = allocator });
 	const anycolor = try flint.AnyColor.newRGBA(0.5, 0.25, 0.333, 1);
 	std.debug.print("Color: {d}, {d}, {d}, {d}.\n", .{ anycolor.color[0], anycolor.color[1], anycolor.color[2], anycolor.color[3] });
 	try window.buffer.print();
@@ -18,6 +18,7 @@ pub fn main() !void {
 	const bytes_read = try qoi_file.readAll(qoi_bytes);
 	std.debug.print("{s}\n", .{qoi_bytes});
 	_ = bytes_read;
-	_ = try flint.Buffer.newFromQOI(qoi_bytes, allocator);
+	const buffer = try flint.Buffer.newFromQOI(qoi_bytes, allocator);
+	try window.buffer.drawBuffer(&buffer, .COPY);
 	while (window.poll()) {
 		try window.draw(); } }

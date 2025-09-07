@@ -154,7 +154,7 @@ pub const Channel = struct {
 	/// Set the value of the pixel at the given coordinates.
 	pub fn setPixel(self: *const Channel, width: u16, height: u16, x: u16, y: u16, value: u8) !void {
 		const i: u32 = Channel.pixelIndex(width, height, x, y);
-		@memcpy(self.bytes[i], value); }
+		self.bytes[i] = value; }
 
 	/// Get the value of the pixel at the given coordinates.
 	pub fn getPixel(self: *const Channel, width: u16, height: u16, x: u16, y: u16) !u8 {
@@ -207,7 +207,7 @@ pub const Buffer = struct {
 	/// Set the color/value of the pixel at the given coordinates.
 	pub fn setPixelColor(self: *const Buffer, x: u16, y: u16, anycolor: AnyColor) !void {
 		for (0..self.n_channels) |i| {
-			self.channels[i].setPixel(self.width, self.height, x, y, anycolor.color[i]); } }
+			try self.channels[i].setPixel(self.width, self.height, x, y, anycolor.color[i]); } }
 
 	/// Get the color/value of the pixel at the given coordinates.
 	pub fn getPixelColor(self: *const Buffer, x: u16, y: u16) !AnyColor {
@@ -290,10 +290,10 @@ pub const Buffer = struct {
 					px[B] = px[B] +% ( b1       & 0x03) -% 2; }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
 					const b2: u8 = bytes[p]; p += 1;
-					const vg: u8 = (b1 & 0x3f) - 32;
-					px[R] = px[R] +% vg - 8 + ((b2 >> 4) & 0x0f);
+					const vg: u8 = (b1 & 0x3f) -% 32;
+					px[R] = px[R] +% vg -% 8 +% ((b2 >> 4) & 0x0f);
 					px[G] = px[G] +% vg;
-					px[B] = px[B] +% vg - 8 +  (b2       & 0x0f); }
+					px[B] = px[B] +% vg -% 8 +%  (b2       & 0x0f); }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
 					run = @intCast(b1 & 0x3f); }
 				index[qoiColorHash(px) & (64 - 1)] = px; }
@@ -310,11 +310,14 @@ pub const Buffer = struct {
 	/// Draw a `Buffer` over the given `Buffer`. The two buffers must have the same dimensions.
 	pub fn drawBuffer(self: *const Buffer, buffer: *const Buffer, blend_mode: BlendMode) !void {
 		if (blend_mode != .COPY) { return error.Unimplemented; }
+		std.debug.print("SELF: {d} {d} {d}\nOTHER: {d} {d} {d}\n", .{ self.width, self.height, self.n_channels, buffer.width, buffer.height, buffer.n_channels });
 		if ((self.width != buffer.width) or
 			(self.height != buffer.height) or
 			(self.n_channels != buffer.n_channels)) { return error.BufferMismatch; }
 		for (0..self.width) |x| { for (0..self.width) |y| {
-			try self.setPixelColor(x, y, self.getPixelColor(x, y).blendAdd(buffer.getPixelColor(x, y))); } } } };
+			try self.setPixelColor(
+				@intCast(x), @intCast(y),
+				(try self.getPixelColor(@intCast(x), @intCast(y))).blendAdd(try buffer.getPixelColor(@intCast(x), @intCast(y)))); } } } };
 
 /// Array-of-structs pixel data, in BGRA order.
 pub const Bitmap = struct {
