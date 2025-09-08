@@ -204,7 +204,7 @@ pub const Buffer = struct {
 			.width = width,
 			.height = height };
 		for (0..n_channels) |i| {
-			std.debug.print("I = {d}\n", .{i});
+			// std.debug.print("I = {d}\n", .{i});
 			buffer.channels[i] = try Channel.new(width, height, allocator); }
 		return buffer; }
 
@@ -215,9 +215,8 @@ pub const Buffer = struct {
 			try self.channels[i].fill(anycolor.color[i]); } }
 
 	/// Get the index of the pixel at the given coordinates.
-	pub fn pixelIndex(width: u16, height: u16, x: u16, y: u16) u32 {
-		std.debug.assert((x < width) and (y < height));
-		return Channel.pixelIndex(width, height, x, y); }
+	pub fn pixelIndex(self: *const Buffer, x: u16, y: u16) u32 {
+		return Channel.pixelIndex(self.width, self.height, x, y); }
 
 	/// Set the color/value of the pixel at the given coordinates.
 	pub fn setPixelColor(self: *const Buffer, x: u16, y: u16, anycolor: AnyColor) !void {
@@ -278,7 +277,7 @@ pub const Buffer = struct {
 		const max_size: u32 = width * height * (n_channels + 1) + QOI_HEADER_SIZE + @as(u32, QOI_PADDING.len);
 		_ = max_size;
 		const px_len: u32 = width * height * n_channels;
-		std.debug.print("Allocated {d} bytes for a {d} x {d} x {d} QOI image.\n", .{px_len, width, height, n_channels});
+		// std.debug.print("Allocated {d} bytes for a {d} x {d} x {d} QOI image.\n", .{px_len, width, height, n_channels});
 		var px: [4]u8 = .{ 0, 0, 0, 255 };
 		var index: [64][4]u8 = .{ .{ 0 } ** 4 } ** 64; // A record of previously seen pixels.
 		const chunks_len: u32 = @intCast(bytes.len - QOI_PADDING.len);
@@ -293,21 +292,21 @@ pub const Buffer = struct {
 					px[R] = bytes[p]; p += 1;
 					px[G] = bytes[p]; p += 1;
 					px[B] = bytes[p]; p += 1;
-					if (i == 0) { std.debug.print("QOI_OP_RGB: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
+					if (i <= 64) { std.debug.print("QOI_OP_RGB: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				else if (b1 == QOI_OP_RGBA) {
 					px[R] = bytes[p]; p += 1;
 					px[G] = bytes[p]; p += 1;
 					px[B] = bytes[p]; p += 1;
 					px[A] = bytes[p]; p += 1;
-					if (i == 0) { std.debug.print("QOI_OP_RGBA: {d} {d} {d} {d}\n", .{px[R], px[G], px[B], px[A]}); } }
+					if (i <= 64) { std.debug.print("QOI_OP_RGBA: {d} {d} {d} {d}\n", .{px[R], px[G], px[B], px[A]}); } }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_INDEX) {
 					px = index[@as(u32, @intCast(b1))];
-					if (i == 0) { std.debug.print("QOI_OP_INDEX: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
+					if (i <= 64) { std.debug.print("QOI_OP_INDEX: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_DIFF) {
 					px[R] = (px[R] +% ((b1 >> 4) & 0b11)) -% 2;
 					px[G] = (px[G] +% ((b1 >> 2) & 0b11)) -% 2;
 					px[B] = (px[B] +% ((b1 >> 0) & 0b11)) -% 2;
-					if (i == 0) { std.debug.print("QOI_OP_DIFF: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
+					if (i <= 64) { std.debug.print("QOI_OP_DIFF: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_LUMA) {
 					const b2: u8 = bytes[p]; p += 1;
 					const vg: u8 = (b1 & 0b111111);
@@ -317,18 +316,18 @@ pub const Buffer = struct {
 					px[G] = px[G] +% vg;
 					px[G] = px[G] -% 32;
 					px[B] = px[B] +% vg;
-					px[R] = px[R] +% ((b2 >> 0) & 0b1111);
+					px[B] = px[B] +% ((b2 >> 0) & 0b1111);
 					px[B] = px[B] -% 40;
-					if (i == 0) { std.debug.print("QOI_OP_LUMA: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
+					if (i <= 64) { std.debug.print("QOI_OP_LUMA: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
 				else if ((b1 & QOI_MASK_2) == QOI_OP_RUN) {
 					run = @intCast(b1 & 0x3f);
-					if (i == 0) { std.debug.print("QOI_OP_RUN: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
-				index[qoiColorHash(px) & (64 - 1)] = px; }
+					if (i <= 64) { std.debug.print("QOI_OP_RUN: {d} {d} {d}\n", .{px[R], px[G], px[B]}); } }
+				index[qoiColorHash(px) & 0b111111] = px; }
 			buffer.channels[R].bytes[i] = px[R];
 			buffer.channels[G].bytes[i] = px[G];
 			buffer.channels[B].bytes[i] = px[B];
 			if (n_channels == 4) { buffer.channels[A].bytes[i] = px[A]; }
-			if ((i == 0) or (i == 4) or (i == 8) or (i == 12)) { std.debug.print("PX: {d} {d} {d} {d}\n", .{px[R], px[G], px[B], px[A]}); }
+			// if ((i == 0) or (i == 4) or (i == 8) or (i == 12)) { std.debug.print("PX: {d} {d} {d} {d}\n", .{px[R], px[G], px[B], px[A]}); }
 			i += 1; }
 		buffer.width = @intCast(width);
 		buffer.height = @intCast(height);
@@ -666,6 +665,13 @@ pub const Window = struct {
 		_ = win32.TranslateMessage(&msg);
 		_ = win32.DispatchMessageA(&msg);
 		return true; }
+
+	/// Get the color of the pixel hovered by the cursor.
+	pub fn getHoveredPixelColor(self: *const Window) !AnyColor {
+		return self.buffer.getPixelColor(self.mouseState.positionX, self.mouseState.positionY); }
+
+	pub fn getHoveredPixelIndex(self: *const Window) !u32 {
+		return self.buffer.pixelIndex(self.mouseState.positionX, self.mouseState.positionY); }
 
 	/// Draw the window `Buffer` to the window. The window is not updated automatically, you must call `draw` whenever you update the buffer and want the changes to take effect.
 	pub fn draw(self: *const Window) !void {

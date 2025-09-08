@@ -17,7 +17,7 @@ To open the documentation execute `make doc-host` from inside `flint/src` and go
 # Checklist
 
 - [x] Fill buffer with solid color.
-- [ ] Get color and coordinates of hovered pixel.
+- [x] Get color and coordinates of hovered pixel.
 - [ ] Fill a pixel (or slice of pixels) in a buffer with color.
 - [ ] Fill a rectangle (or slice of rectangles) with a solid color.
 - [ ] Texture sampler with filtering and scaling.

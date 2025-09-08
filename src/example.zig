@@ -27,4 +27,7 @@ pub fn main() !void {
 	window.buffer = buffer;
 	// try window.buffer.drawBuffer(&buffer, .COPY);
 	while (window.poll()) {
+		// const hovered_index: u32 = try window.getHoveredPixelIndex();
+		// const hovered_pixel: flint.AnyColor = try window.getHoveredPixelColor();
+		// std.debug.print("{d}: {d} {d} {d} {d}\n", .{ hovered_index, hovered_pixel.color[flint.R], hovered_pixel.color[flint.G], hovered_pixel.color[flint.B], hovered_pixel.color[flint.A] });
 		try window.draw(); } }
