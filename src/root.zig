@@ -10,6 +10,9 @@ const win32 = @cImport({
 	@cInclude("shellapi.h"); });
 
 pub const VERSION_STRING = "0.1.0";
+pub const X = 0;
+pub const Y = 1;
+pub const Z = 2;
 pub const R = 0;
 pub const G = 1;
 pub const B = 2;
@@ -80,6 +83,7 @@ pub const AnyColor = struct {
 			.ADD  => self.blendAdd(other),
 			.SUB  => self.blendSub(other),
 			.MUL  => self.blendMul(other),
+			.DIV  => self.blendDiv(other),
 			.MAX  => self.blendMax(other),
 			.MIN  => self.blendMin(other) }; }
 
@@ -114,7 +118,24 @@ pub const AnyColor = struct {
 			// TODO Convert to float first.
 			result.color[i] = self.color[i] / other.color[i]; }
 		return result; }
+
+	pub fn blendMax(self: AnyColor, other: AnyColor) AnyColor {
+		var result: AnyColor = .{};
+		for (0..self.n_channels) |i| {
+			result.color[i] = @max(self.color[i], other.color[i]); }
+		return result; }
+
+	pub fn blendMin(self: AnyColor, other: AnyColor) AnyColor {
+		var result: AnyColor = .{};
+		for (0..self.n_channels) |i| {
+			result.color[i] = @min(self.color[i], other.color[i]); }
+		return result; }
 };
+
+/// Rectangle.
+pub const Rect = struct {
+	position: [2]u16,
+	size: [2]u16 };
 
 /// Decompose a slice of bytes representing a color
 // pub fn decomposeColor(color: []u8, n_channels: u8) [][]u8 {
@@ -166,6 +187,8 @@ pub const Channel = struct {
 		const i: u32 = Channel.pixelIndex(width, height, x, y);
 		return self.bytes[i]; } };
 
+const PixelShader = *const fn (x: u16, y: u16, userPtr: ?*anyopaque) AnyColor;
+
 /// An image buffer.
 pub const Buffer = struct {
 	/// The channels of this buffer.
@@ -207,12 +230,6 @@ pub const Buffer = struct {
 			// std.debug.print("I = {d}\n", .{i});
 			buffer.channels[i] = try Channel.new(width, height, allocator); }
 		return buffer; }
-
-	/// Fill the given `Buffer` uniformly with a given value.
-	pub fn fill(self: *const Buffer, anycolor: AnyColor) !void {
-		std.debug.assert(anycolor.n_channels == self.n_channels);
-		for (0..self.n_channels) |i| {
-			try self.channels[i].fill(anycolor.color[i]); } }
 
 	/// Get the index of the pixel at the given coordinates.
 	pub fn pixelIndex(self: *const Buffer, x: u16, y: u16) u32 {
@@ -334,9 +351,19 @@ pub const Buffer = struct {
 		buffer.n_channels = n_channels;
 		return buffer; }
 
+	/// Fill the given `Buffer` uniformly with a given value.
+	pub fn fillA(self: *const Buffer, anycolor: AnyColor) !void {
+		std.debug.assert(anycolor.n_channels == self.n_channels);
+		for (0..self.n_channels) |i| {
+			try self.channels[i].fill(anycolor.color[i]); } }
+
+	pub fn fillS(self: *const Buffer, shader: PixelShader, userPtr: ?*anyopaque) !void {
+		for (0..self.height) |y| { for (0..self.width) |x| {
+			const point: [2]u16 = .{ @intCast(x), @intCast(y) };
+			try self.setPixelColor(point[X], point[Y], shader(point[X], point[Y], userPtr)); } } }
+
 	/// Draw a `Buffer` over the given `Buffer`. The two buffers must have the same dimensions.
 	pub fn drawBuffer(self: *const Buffer, buffer: *const Buffer, blend_mode: BlendMode) !void {
-		if (blend_mode != .COPY) { return error.Unimplemented; }
 		std.debug.print("SELF: {d} {d} {d}\nOTHER: {d} {d} {d}\n", .{ self.width, self.height, self.n_channels, buffer.width, buffer.height, buffer.n_channels });
 		if ((self.width != buffer.width) or
 			(self.height != buffer.height) or
@@ -345,7 +372,41 @@ pub const Buffer = struct {
 			// std.debug.print("{d} x {d}\n", .{ x, y });
 			try self.setPixelColor(
 				@intCast(x), @intCast(y),
-				(try self.getPixelColor(@intCast(x), @intCast(y))).blendAdd(try buffer.getPixelColor(@intCast(x), @intCast(y)))); } } } };
+				(try self.getPixelColor(@intCast(x), @intCast(y))).blend(try buffer.getPixelColor(@intCast(x), @intCast(y)), blend_mode)); } } }
+
+	/// Draw a single point.
+	pub fn drawPoint(self: *const Buffer, point: [2]u16, anycolor: AnyColor, blend_mode: BlendMode) !void {
+		try self.setPixelColor(
+			point[X], point[Y],
+			(try self.getPixelColor(point[X], point[Y])).blend(anycolor, blend_mode)); }
+
+	/// Draw an number of points.
+	pub fn drawPoints(self: *const Buffer, points: [][2]u16, anycolor: AnyColor, blend_mode: BlendMode) !void {
+		for (points) |point| {
+			try self.setPixelColor(
+				point[X], point[Y],
+				(try self.getPixelColor(point[X], point[Y])).blend(anycolor, blend_mode)); } }
+
+	/// Draw a uniformly-colored rectangle.
+	pub fn drawRect(self: *const Buffer, rect: Rect, anycolor: AnyColor, blend_mode: BlendMode) !void {
+		const x0 = std.math.clamp(rect.position[X] - rect.size[X] / 2, 0, self.width);
+		const x1 = std.math.clamp(rect.position[X] + rect.size[X] / 2, 0, self.width);
+		const y0 = std.math.clamp(rect.position[Y] - rect.size[Y] / 2, 0, self.height);
+		const y1 = std.math.clamp(rect.position[Y] + rect.size[Y] / 2, 0, self.height);
+		for (x0..x1) |x| { for (y0..y1) |y| {
+			const point: [2]u16 = .{ @intCast(x), @intCast(y) };
+			try self.setPixelColor(
+				point[X], point[Y],
+				(try self.getPixelColor(point[X], point[Y])).blend(anycolor, blend_mode)); } } }
+
+	// TODO: Make multiple versions of each function, give them arbitrary names like drawRectsK, then make a bunch of games using this API, and then
+	// analyze which ones were most useful and focus on making those good. This is evidence-driven API design.
+	/// Draw a number of uniformly-colored rectangles.
+	pub fn drawRects(self: *const Buffer, rects: []Rect, anycolor: AnyColor, blend_mode: BlendMode) !void {
+		for (rects) |rect| {
+			try self.drawRect(rect, anycolor, blend_mode); } }
+
+};
 
 /// Array-of-structs pixel data, in BGRA order.
 pub const Bitmap = struct {
@@ -741,6 +802,8 @@ pub const BlendMode = enum {
 	SUB,
 	/// The *foreground* and the *background* are multiplied.
 	MUL,
+	/// The *foreground* and the *background* are divided.
+	DIV,
 	/// The higher value among the *foreground* and the *background* is taken.
 	MAX,
 	/// The lower value among the *foreground* and the *background* is taken.
