@@ -1,0 +1,50 @@
+fn palette(d: f32) [3]f32 {
+	return std.math.lerp([3]f32{0.2, 0.7, 0.9}, [3]f32{ 1.0, 0.0, 1.0}, d); }
+
+fn rotate(p: [2]f32, a: f32) [2]f32 {
+	const c: f32 = std.math.cos(a);
+    const s: f32 = std.math.sin(a);
+	// return p * [2]f32{p[0] * c + p[1] * s, p[0] * -s + p[1] * c};
+    return p * [2]f32{p[0] * c + p[1] * -s, p[0] * s,  + p[1] * c}; }
+
+fn map(p: [3]f32, time: f32) f32 {
+	for (0..8) |i| {
+		const t: f32 = time * 0.2;
+		p[flint.X], p[flint.Z] = rotate([2]f32{ p[flint.X], p[flint.Z] }, t);
+		p[flint.X], p[flint.Y] = rotate([2]f32{ p[flint.X], p[flint.Y] }, t*1.89);
+		p[flint.X], p[flint.Z] = @abs([2]f32{ p[flint.X], p[flint.Z] });
+		p[flint.X] -= 0.5; p[flint.Z] -= 0.5; }
+	return p.dot([3]f32{ sign(p[flint.X]), sign(p[flint.Y]), sign(p[flint.Z])) / 5.0; }
+
+fn rm(ro: [3]f32, rd: [3]f32, time: f32) [4]f32 {
+	const t: f32 = 0.0;
+	const col: [3]f32 = .{ 0.0 } ** 3;
+	var d: f32 = 0.0;
+	for (0..64) |i| {
+		var p: [3]f32 = ro + t * rd;
+		d = 0.5 * map(p, time);
+		if (d < 0.02) { break; }
+		if (d > 100.0) { break; }
+		col += palette(@sqrt(p[flint.X] * p[flint.X] + p[flint.Y] * p[flint.Y] + p[flint.Z] * p[flint.Z]) * 0.1) / (400.0 * d);
+		t += d; }
+	return [4]f32{ col[flint.X], col[flint.Y], col[flint.Z] ,1.0 / (d * 100.0) }; }
+
+pub fn shader_b(x: u16, y: u16, userPtr: ?*anyopaque) flint.AnyColor {
+	const time: *f32 = @ptrCast(userPtr);
+	// vec2 uv = (fragCoord-(iResolution.xy/2.))/iResolution.x;
+	const uv: [2]f32 = .{ @as(f32, @floatFromInt(x)) / 1344, @as(f32, @floatFromInt(y)) / 896 };
+	const ro: [3]f32 = .{ 0.0, 0.0, -50.0 };
+	ro[X], ro[Z] = rotate(.{ ro[X], ro[Z] }, time);
+	vec3 cf = normalize(-ro);
+	vec3 cs = normalize(cross(cf,vec3(0.,1.,0.)));
+	vec3 cu = normalize(cross(cf,cs));
+
+	vec3 uuv = ro+cf*3. + uv.x*cs + uv.y*cu;
+
+	vec3 rd = normalize(uuv-ro);
+
+	vec4 col = rm(ro,rd);
+
+
+	fragColor = col;
+}

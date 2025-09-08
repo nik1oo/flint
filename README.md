@@ -14,6 +14,18 @@ Software renderer for simple 2D games.
 
 To open the documentation execute `make doc-host` from inside `flint/src` and go to `http://localhost:8000/`.
 
+# Dependencies
+
+- `ntdll.dll`
+- `kernel32.DLL`
+- `kernelbase.dll`
+- `user32.dll`
+- `win32u.dll`
+- `gdi32.dll`
+- `gdi32full.dll`
+- `msvcp_win.dll`
+- `ucrtbase.dll`
+
 # Checklist
 
 - [x] Fill buffer with solid color.

@@ -13,6 +13,7 @@ pub const VERSION_STRING = "0.1.0";
 pub const X = 0;
 pub const Y = 1;
 pub const Z = 2;
+pub const W = 3;
 pub const R = 0;
 pub const G = 1;
 pub const B = 2;
@@ -136,6 +137,654 @@ pub const AnyColor = struct {
 pub const Rect = struct {
 	position: [2]u16,
 	size: [2]u16 };
+
+pub const Vec2 = @Vector(2, f32);
+pub const Vec3 = @Vector(3, f32);
+pub const Vec4 = @Vector(4, f32);
+
+/// A 2x2 matrix, stored in column-major order.
+pub const Mat2x2 = [2]Vec2;
+
+/// Construct a 2x2 matrix, defined in row-major order.
+pub fn mat2x2(a00: f32, a10: f32, a01: f32, a11: f32) Mat2x2 {
+	return .{
+		.{ a00, a10 },
+		.{ a01, a11 } }; }
+
+/// Vector-matrix product of a 2-vector and a 2x2 matrix.
+fn vecMatMul2x2(v: Vec2, m: Mat2x2) Vec2 {
+	return Vec2{ dot(v, m[0]), dot(v, m[1]) }; }
+
+/// Rotate a 2x2 matrix.
+pub fn rotateMat2x2(m: Mat2x2) Mat2x2 {
+	return mat2x2(
+		m[0][0], m[1][0],
+		m[0][1], m[1][1]); }
+
+/// Matrix product of a 2x2 matrix and a 2x2 matrix.
+pub fn matMul2x2(m1: Mat2x2, m2: Mat2x2) Mat2x2 {
+	const m1rot = rotateMat2x2(m1);
+	return mat2x2(
+		m1rot[0] * m2[0], m1rot[0] * m2[0],
+		m1rot[1] * m2[1], m1rot[1] * m2[1]); }
+
+/// A 2x3 matrix, stored in column-major order.
+pub const Mat2x3 = [2]@Vector(3, f32);
+
+/// Construct a 2x3 matrix, defined in column-major order.
+pub fn mat2x3(a00: f32, a10: f32, a20: f32, a01: f32, a11: f32, a21: f32) Mat2x3 {
+	return .{
+		.{ a00, a10, a20 },
+		.{ a01, a11, a21 } }; }
+
+/// Vector-matrix product of a 3-vector and a 2x3 matrix.
+fn vecMatMul2x3(v: Vec3, m: Mat2x3) Vec2 {
+	return Vec3{ dot(v, m[0]), dot(v, m[1]) }; }
+
+/// Rotate a 2x3 matrix.
+pub fn rotateMat2x3(m: Mat2x3) Mat3x2 {
+	return mat3x2(
+		m[0][0], m[1][0],
+		m[0][1], m[1][1],
+		m[0][2], m[1][2]); }
+
+/// Matrix product of a 2x3 matrix and a 3x2 matrix.
+pub fn matMul2x3(m1: Mat2x3, m2: Mat3x2) Mat3x3 {
+	const m1rot = rotateMat2x3(m1);
+	return mat3x3(
+		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]),
+		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]),
+		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2])); }
+
+/// A 2x4 matrix, stored in column-major order.
+pub const Mat2x4 = [2]@Vector(4, f32);
+
+/// Construct a 2x4 matrix, defined in column-major order.
+pub fn mat2x4(a00: f32, a10: f32, a20: f32, a30: f32, a01: f32, a11: f32, a21: f32, a31: f32) Mat2x4 {
+	return .{
+		.{ a00, a10, a20, a30 },
+		.{ a01, a11, a21, a31 } }; }
+
+/// Vector-matrix product of a 4-vector and a 2x4 matrix.
+fn vecMatMul2x4(v: Vec4, m: Mat2x4) Vec2 {
+	return Vec2{ dot(v, m[0]), dot(v, m[1]) }; }
+
+/// Rotate a 2x4 matrix.
+pub fn rotateMat2x4(m: Mat2x4) Mat4x2 {
+	return mat4x2(
+		m[0][0], m[1][0],
+		m[0][1], m[1][1],
+		m[0][2], m[1][2],
+		m[0][3], m[1][3]); }
+
+/// Matrix product of a 2x4 matrix and a 4x2 matrix.
+pub fn matMul2x4(m1: Mat2x4, m2: Mat4x2) Mat4x4 {
+	const m1rot = rotateMat2x4(m1);
+	return mat4x4(
+		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]), try dot(m1rot[0], m2[3]),
+		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]), try dot(m1rot[1], m2[3]),
+		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2]), try dot(m1rot[2], m2[3]),
+		try dot(m1rot[3], m2[0]), try dot(m1rot[3], m2[1]), try dot(m1rot[3], m2[2]), try dot(m1rot[3], m2[3])); }
+
+/// A 3x2 matrix, stored in column-major order.
+pub const Mat3x2 = [3]@Vector(2, f32);
+
+/// Construct a 3x2 matrix, defined in column-major order.
+pub fn mat3x2(a00: f32, a10: f32, a01: f32, a11: f32, a02: f32, a12: f32) Mat3x2 {
+	return .{
+		.{ a00, a10 },
+		.{ a01, a11 },
+		.{ a02, a12 } }; }
+
+/// Vector-matrix product of a 2-vector and a 3x2 matrix.
+fn vecMatMul3x2(v: Vec2, m: Mat3x2) Vec3 {
+	return Vec3{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]) }; }
+
+/// Rotate a 3x2 matrix.
+pub fn rotateMat3x2(m: Mat3x2) Mat2x3 {
+	return mat2x3(
+		m[0][0], m[1][0], m[2][0],
+		m[0][1], m[1][1], m[2][1]); }
+
+/// Matrix product of a 3x2 matrix and a 2x3 matrix.
+pub fn matMul3x2(m1: Mat3x2, m2: Mat2x3) Mat2x2 {
+	const m1rot = rotateMat3x2(m1);
+	return mat2x2(
+		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]),
+		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1])); }
+
+/// A 3x3 matrix, stored in column-major order.
+pub const Mat3x3 = [3]@Vector(3, f32);
+
+/// Construct a 3x3 matrix, defined in column-major order.
+pub fn mat3x3(a00: f32, a10: f32, a20: f32, a01: f32, a11: f32, a21: f32, a02: f32, a12: f32, a22: f32) Mat3x3 {
+	return .{
+		.{ a00, a10, a20 },
+		.{ a01, a11, a21 },
+		.{ a02, a12, a22 } }; }
+
+/// Vector-matrix product of a 3-vector and a 3x3 matrix.
+fn vecMatMul3x3(v: Vec3, m: Mat3x3) Vec3 {
+	return Vec3{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]) }; }
+
+/// Rotate a 3x3 matrix.
+pub fn rotateMat3x3(m: Mat3x3) Mat3x3 {
+	return mat3x3(
+		m[0][0], m[1][0], m[2][0],
+		m[0][1], m[1][1], m[2][1],
+		m[0][2], m[1][2], m[2][2]); }
+
+/// Matrix product of a 3x3 matrix and a 3x3 matrix.
+pub fn matMul3x3(m1: Mat3x3, m2: Mat3x3) Mat3x3 {
+	const m1rot = rotateMat3x3(m1);
+	return mat3x3(
+		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]),
+		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]),
+		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2])); }
+
+/// A 3x4 matrix, stored in column-major order.
+pub const Mat3x4 = [3]@Vector(4, f32);
+
+/// Construct a 3x4 matrix, defined in column-major order.
+pub fn mat3x4(a00: f32, a10: f32, a20: f32, a30: f32, a01: f32, a11: f32, a21: f32, a31: f32, a02: f32, a12: f32, a22: f32, a32: f32) Mat3x4 {
+	return .{
+		.{ a00, a10, a20, a30 },
+		.{ a01, a11, a21, a31 },
+		.{ a02, a12, a22, a32 } }; }
+
+/// Vector-matrix product of a 4-vector and a 3x4 matrix.
+fn vecMatMul3x4(v: Vec4, m: Mat3x4) Vec3 {
+	return Vec3{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]) }; }
+
+/// Rotate a 3x4 matrix.
+pub fn rotateMat3x4(m: Mat3x4) Mat4x3 {
+	return mat4x3(
+		m[0][0], m[1][0], m[2][0],
+		m[0][1], m[1][1], m[2][1],
+		m[0][2], m[1][2], m[2][2],
+		m[0][3], m[1][3], m[2][3]); }
+
+/// Matrix product of a 3x4 matrix and a 4x3 matrix.
+pub fn matMul3x4(m1: Mat3x4, m2: Mat4x3) Mat4x4 {
+	const m1rot = rotateMat3x4(m1);
+	return mat4x4(
+		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]), try dot(m1rot[0], m2[3]),
+		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]), try dot(m1rot[1], m2[3]),
+		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2]), try dot(m1rot[2], m2[3]),
+		try dot(m1rot[3], m2[0]), try dot(m1rot[3], m2[1]), try dot(m1rot[3], m2[2]), try dot(m1rot[3], m2[3])); }
+
+/// A 4x2 matrix, stored in column-major order.
+pub const Mat4x2 = [4]@Vector(2, f32);
+
+/// Construct a 4x2 matrix, defined in column-major order.
+pub fn mat4x2(a00: f32, a10: f32, a01: f32, a11: f32, a02: f32, a12: f32, a03: f32, a13: f32) Mat4x2 {
+	return .{
+		.{ a00, a10 },
+		.{ a01, a11 },
+		.{ a02, a12 },
+		.{ a03, a13 } }; }
+
+/// Vector-matrix product of a 2-vector and a 4x2 matrix.
+fn vecMatMul4x2(v: Vec2, m: Mat4x2) Vec4 {
+	return Vec4{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]), dot(v, m[3]) }; }
+
+/// Rotate a 4x2 matrix.
+pub fn rotateMat4x2(m: Mat4x2) Mat2x4 {
+	return mat2x4(
+		m[0][0], m[1][0], m[2][0], m[3][0],
+		m[0][1], m[1][1], m[2][1], m[3][1]); }
+
+/// Matrix product of a 4x2 matrix and a 2x4 matrix.
+pub fn matMul4x2(m1: Mat4x2, m2: Mat2x4) Mat2x2 {
+	const m1rot = rotateMat4x2(m1);
+	return mat2x2(
+		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]),
+		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1])); }
+
+/// A 4x3 matrix, stored in column-major order.
+pub const Mat4x3 = [4]@Vector(3, f32);
+
+/// Construct a 4x3 matrix, defined in column-major order.
+pub fn mat4x3(a00: f32, a10: f32, a20: f32, a01: f32, a11: f32, a21: f32, a02: f32, a12: f32, a22: f32, a03: f32, a13: f32, a23: f32) Mat4x3 {
+	return .{
+		.{ a00, a10, a20 },
+		.{ a01, a11, a21 },
+		.{ a02, a12, a22 },
+		.{ a03, a13, a23 } }; }
+
+/// Vector-matrix product of a 3-vector and a 4x3 matrix.
+fn vecMatMul4x3(v: Vec3, m: Mat4x3) Vec4 {
+	return Vec4{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]), dot(v, m[3]) }; }
+
+/// Rotate a 4x3 matrix.
+pub fn rotateMat4x3(m: Mat4x3) Mat3x4 {
+	return mat3x4(
+		m[0][0], m[1][0], m[2][0], m[3][0],
+		m[0][1], m[1][1], m[2][1], m[3][1],
+		m[0][2], m[1][2], m[2][2], m[3][2]); }
+
+/// Matrix product of a 4x3 matrix and a 3x4 matrix.
+pub fn matMul4x3(m1: Mat4x3, m2: Mat3x4) Mat3x3 {
+	const m1rot = rotateMat4x3(m1);
+	return mat3x3(
+		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]),
+		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]),
+		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2])); }
+
+/// A 4x4 matrix, stored in column-major order.
+pub const Mat4x4 = [4]@Vector(4, f32);
+
+/// Construct a 4x4 matrix, defined in column-major order.
+pub fn mat4x4(a00: f32, a10: f32, a20: f32, a30: f32, a01: f32, a11: f32, a21: f32, a31: f32, a02: f32, a12: f32, a22: f32, a32: f32, a03: f32, a13: f32, a23: f32, a33: f32) Mat4x4 {
+	return .{
+		.{ a00, a10, a20, a30 },
+		.{ a01, a11, a21, a31 },
+		.{ a02, a12, a22, a32 },
+		.{ a03, a13, a23, a33 } }; }
+
+/// Vector-matrix product of a 4-vector and a 4x4 matrix.
+fn vecMatMul4x4(v: Vec4, m: Mat4x4) Vec4 {
+	return Vec4{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]), dot(v, m[3]) }; }
+
+/// Rotate a 4x4 matrix.
+pub fn rotateMat4x4(m: Mat4x4) Mat4x4 {
+	return mat4x4(
+		m[0][0], m[1][0], m[2][0], m[3][0],
+		m[0][1], m[1][1], m[2][1], m[3][1],
+		m[0][2], m[1][2], m[2][2], m[3][2],
+		m[0][3], m[1][3], m[2][3], m[3][3]); }
+
+/// Matrix product of a 4x4 matrix and a 4x4 matrix.
+pub fn matMul4x4(m1: Mat4x4, m2: Mat4x4) Mat4x4 {
+	const m1rot = rotateMat4x4(m1);
+	return mat4x4(
+		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]), try dot(m1rot[0], m2[3]),
+		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]), try dot(m1rot[1], m2[3]),
+		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2]), try dot(m1rot[2], m2[3]),
+		try dot(m1rot[3], m2[0]), try dot(m1rot[3], m2[1]), try dot(m1rot[3], m2[2]), try dot(m1rot[3], m2[3])); }
+
+/// Vector-matrix product.
+pub fn vecMatMul(v: anytype, m: anytype) @Vector(@typeInfo(@TypeOf(m)).len, f32) {
+	switch (@TypeOf(m)) {
+		Mat2x2 => switch (@TypeOf(v)) {
+			Vec2 => return vecMatMul2x2(v, m),
+			else => unreachable },
+		Mat2x3 => switch (@TypeOf(v)) {
+			Vec3 => return vecMatMul2x3(v, m),
+			else => unreachable },
+		Mat2x4 => switch (@TypeOf(v)) {
+			Vec4 => return vecMatMul2x4(v, m),
+			else => unreachable },
+		Mat3x2 => switch (@TypeOf(v)) {
+			Vec2 => return vecMatMul3x2(v, m),
+			else => unreachable },
+		Mat3x3 => switch (@TypeOf(v)) {
+			Vec3 => return vecMatMul3x3(v, m),
+			else => unreachable },
+		Mat3x4 => switch (@TypeOf(v)) {
+			Vec4 => return vecMatMul3x4(v, m),
+			else => unreachable },
+		Mat4x2 => switch (@TypeOf(v)) {
+			Vec2 => return vecMatMul4x2(v, m),
+			else => unreachable },
+		Mat4x3 => switch (@TypeOf(v)) {
+			Vec3 => return vecMatMul4x3(v, m),
+			else => unreachable },
+		Mat4x4 => switch (@TypeOf(v)) {
+			Vec4 => return vecMatMul4x4(v, m),
+			else => unreachable },
+		else => unreachable } }
+
+/// Vector-matrix product.
+// pub fn rotateMat(m: anytype) [@typeInfo(@TypeOf(m)).array.child.len]@Vector(@typeInfo(@TypeOf(m)).array.len, f32) {
+//     switch (@TypeOf(m)) {
+//         Mat2x2 => return rotateMat2x2(m),
+//         Mat2x3 => return rotateMat2x3(m),
+//         Mat2x4 => return rotateMat2x4(m),
+//         Mat3x2 => return rotateMat3x2(m),
+//         Mat3x3 => return rotateMat3x3(m),
+//         Mat3x4 => return rotateMat3x4(m),
+//         Mat4x2 => return rotateMat4x2(m),
+//         Mat4x3 => return rotateMat4x3(m),
+//         Mat4x4 => return rotateMat4x4(m),
+//         else => unreachable } }
+
+/// Substitute for GLSL `abs(x)`.
+pub fn abs(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float, .vector => { return @abs(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32 => { return @abs(@Vector(2, f32){ a[X], a[Y] }); },
+			[2]i32 => { return @abs(@Vector(2, i32){ a[X], a[Y] }); },
+			[3]f32 => { return @abs(@Vector(3, f32){ a[X], a[Y], a[Z] }); },
+			[3]i32 => { return @abs(@Vector(3, i32){ a[X], a[Y], a[Z] }); },
+			[4]f32 => { return @abs(@Vector(4, f32){ a[X], a[Y], a[Z], a[W] }); },
+			[4]i32 => { return @abs(@Vector(4, i32){ a[X], a[Y], a[Z], a[W] }); },
+			else => unreachable } } }
+
+/// Substitute for GLSL `acos(x)`.
+pub fn acos(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.acos(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.acos(a[X]), std.math.acos(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.acos(a[X]), std.math.acos(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.acos(a[X]), std.math.acos(a[Y]), std.math.acos(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.acos(a[X]), std.math.acos(a[Y]), std.math.acos(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.acos(a[X]), std.math.acos(a[Y]), std.math.acos(a[Z]), std.math.acos(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.acos(a[X]), std.math.acos(a[Y]), std.math.acos(a[Z]), std.math.acos(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `acosh(x)`.
+pub fn acosh(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.acosh(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.acosh(a[X]), std.math.acosh(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.acosh(a[X]), std.math.acosh(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.acosh(a[X]), std.math.acosh(a[Y]), std.math.acosh(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.acosh(a[X]), std.math.acosh(a[Y]), std.math.acosh(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.acosh(a[X]), std.math.acosh(a[Y]), std.math.acosh(a[Z]), std.math.acosh(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.acosh(a[X]), std.math.acosh(a[Y]), std.math.acosh(a[Z]), std.math.acosh(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `all(x)`.
+pub fn all(a: anytype) !bool {
+	switch (@TypeOf(a)) {
+		[2]bool, @Vector(2, bool) => { return a[X] and a[Y]; },
+		[3]bool, @Vector(3, bool) => { return a[X] and a[Y] and a[Z]; },
+		[4]bool, @Vector(4, bool) => { return a[X] and a[Y] and a[Z] and a[W]; },
+		else => unreachable } }
+
+/// Substitute for GLSL `any(x)`.
+pub fn any(a: anytype) !bool {
+	switch (@TypeOf(a)) {
+		[2]bool, @Vector(2, bool) => { return a[X] or a[Y]; },
+		[3]bool, @Vector(3, bool) => { return a[X] or a[Y] or a[Z]; },
+		[4]bool, @Vector(4, bool) => { return a[X] or a[Y] or a[Z] or a[W]; },
+		else => unreachable } }
+
+/// Substitute for GLSL `asin(x)`.
+pub fn asin(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.asin(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.asin(a[X]), std.math.asin(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.asin(a[X]), std.math.asin(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.asin(a[X]), std.math.asin(a[Y]), std.math.asin(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.asin(a[X]), std.math.asin(a[Y]), std.math.asin(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.asin(a[X]), std.math.asin(a[Y]), std.math.asin(a[Z]), std.math.asin(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.asin(a[X]), std.math.asin(a[Y]), std.math.asin(a[Z]), std.math.asin(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `asinh(x)`.
+pub fn asinh(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.asinh(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.asinh(a[X]), std.math.asinh(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.asinh(a[X]), std.math.asinh(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.asinh(a[X]), std.math.asinh(a[Y]), std.math.asinh(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.asinh(a[X]), std.math.asinh(a[Y]), std.math.asinh(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.asinh(a[X]), std.math.asinh(a[Y]), std.math.asinh(a[Z]), std.math.asinh(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.asinh(a[X]), std.math.asinh(a[Y]), std.math.asinh(a[Z]), std.math.asinh(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `atan(y_over_x)`.
+pub fn atan(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.atan(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.atan(a[X]), std.math.atan(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.atan(a[X]), std.math.atan(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.atan(a[X]), std.math.atan(a[Y]), std.math.atan(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.atan(a[X]), std.math.atan(a[Y]), std.math.atan(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.atan(a[X]), std.math.atan(a[Y]), std.math.atan(a[Z]), std.math.atan(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.atan(a[X]), std.math.atan(a[Y]), std.math.atan(a[Z]), std.math.atan(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `atan(y, x)`.
+pub fn atan2(y: anytype, x: anytype) !@TypeOf(y) {
+	switch (@typeInfo(@TypeOf(y))) {
+		.float => { return std.math.atan2(y, x); },
+		else => unreachable } }
+
+/// Substitute for GLSL `atanh(x)`.
+pub fn atanh(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.atanh(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.atanh(a[X]), std.math.atanh(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.atanh(a[X]), std.math.atanh(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.atanh(a[X]), std.math.atanh(a[Y]), std.math.atanh(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.atanh(a[X]), std.math.atanh(a[Y]), std.math.atanh(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.atanh(a[X]), std.math.atanh(a[Y]), std.math.atanh(a[Z]), std.math.atanh(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.atanh(a[X]), std.math.atanh(a[Y]), std.math.atanh(a[Z]), std.math.atanh(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `ceil(x)`.
+pub fn ceil(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.ceil(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.ceil(a[X]), std.math.ceil(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.ceil(a[X]), std.math.ceil(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.ceil(a[X]), std.math.ceil(a[Y]), std.math.ceil(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.ceil(a[X]), std.math.ceil(a[Y]), std.math.ceil(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.ceil(a[X]), std.math.ceil(a[Y]), std.math.ceil(a[Z]), std.math.ceil(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.ceil(a[X]), std.math.ceil(a[Y]), std.math.ceil(a[Z]), std.math.ceil(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `clamp(x)`.
+pub fn clamp(x: anytype, minVal: @TypeOf(x), maxVal: @TypeOf(x)) !@TypeOf(x) {
+	switch (@typeInfo(@TypeOf(x))) {
+		.int, .float, .vector => { return std.math.clamp(x, minVal, maxVal); },
+		else => switch (@TypeOf(x)) {
+			[2]f32 => { return @as([2]f32, std.math.clamp(@as(@Vector(2, f32), x), @as(@Vector(2, f32), minVal), @as(@Vector(2, f32), maxVal))); },
+			[2]i32 => { return @as([2]i32, std.math.clamp(@as(@Vector(2, i32), x), @as(@Vector(2, i32), minVal), @as(@Vector(2, i32), maxVal))); },
+			[3]f32 => { return @as([3]f32, std.math.clamp(@as(@Vector(3, f32), x), @as(@Vector(3, f32), minVal), @as(@Vector(3, f32), maxVal))); },
+			[3]i32 => { return @as([3]i32, std.math.clamp(@as(@Vector(3, i32), x), @as(@Vector(3, i32), minVal), @as(@Vector(3, i32), maxVal))); },
+			[4]f32 => { return @as([4]f32, std.math.clamp(@as(@Vector(4, f32), x), @as(@Vector(4, f32), minVal), @as(@Vector(4, f32), maxVal))); },
+			[4]i32 => { return @as([4]i32, std.math.clamp(@as(@Vector(4, i32), x), @as(@Vector(4, i32), minVal), @as(@Vector(4, i32), maxVal))); },
+			else => unreachable } } }
+
+/// Substitute for GLSL `cos(x)`.
+pub fn cos(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.cos(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.cos(a[X]), std.math.cos(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.cos(a[X]), std.math.cos(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.cos(a[X]), std.math.cos(a[Y]), std.math.cos(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.cos(a[X]), std.math.cos(a[Y]), std.math.cos(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.cos(a[X]), std.math.cos(a[Y]), std.math.cos(a[Z]), std.math.cos(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.cos(a[X]), std.math.cos(a[Y]), std.math.cos(a[Z]), std.math.cos(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `cosh(x)`.
+pub fn cosh(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.cosh(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.cosh(a[X]), std.math.cosh(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.cosh(a[X]), std.math.cosh(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.cosh(a[X]), std.math.cosh(a[Y]), std.math.cosh(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.cosh(a[X]), std.math.cosh(a[Y]), std.math.cosh(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.cosh(a[X]), std.math.cosh(a[Y]), std.math.cosh(a[Z]), std.math.cosh(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.cosh(a[X]), std.math.cosh(a[Y]), std.math.cosh(a[Z]), std.math.cosh(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `cross(x, y)`.
+pub fn cross(x: anytype, y: @TypeOf(x)) !@TypeOf(x) {
+	switch (@TypeOf(x)) {
+		[3]f32, @Vector(3, f32) => { return .{ x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0] }; },
+		else => unreachable } }
+
+/// Substitute for GLSL `degrees(radians)`.
+pub fn degrees(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.float => { return (180 * a) / std.math.pi; },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ (180 * a[X]) / std.math.pi, (180 * a[Y]) / std.math.pi }; },
+			[3]f32, @Vector(3, f32) => { return .{ (180 * a[X]) / std.math.pi, (180 * a[Y]) / std.math.pi, (180 * a[Z]) / std.math.pi }; },
+			[4]f32, @Vector(4, f32) => { return .{ (180 * a[X]) / std.math.pi, (180 * a[Y]) / std.math.pi, (180 * a[Z]) / std.math.pi, (180 * a[W]) / std.math.pi }; },
+			else => unreachable } } }
+
+// TODO determinant
+
+/// Substitute for GLSL `distance(p0, p1)`.
+pub fn distance(a: anytype, b: @TypeOf(a)) !@TypeOf(a) {
+	return length(a - b); }
+
+/// Substitute for GLSL `dot(x, y)`.
+pub fn dot(a: anytype, b: @TypeOf(a)) !@typeInfo(@TypeOf(a)).vector.child {
+	switch (@TypeOf(a)) {
+		[2]f32, @Vector(2, f32) => { return a[X] * b[X] + a[Y] * b[Y]; },
+		[3]f32, @Vector(3, f32) => { return a[X] * b[X] + a[Y] * b[Y] + a[Z] * b[Z]; },
+		[4]f32, @Vector(4, f32) => { return a[X] * b[X] + a[Y] * b[Y] + a[Z] * b[Z] + a[W] * b[W]; },
+		else => unreachable } }
+
+/// Substitute for GLSL `floor(x)`.
+pub fn floor(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.floor(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.floor(a[X]), std.math.floor(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.floor(a[X]), std.math.floor(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.floor(a[X]), std.math.floor(a[Y]), std.math.floor(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.floor(a[X]), std.math.floor(a[Y]), std.math.floor(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.floor(a[X]), std.math.floor(a[Y]), std.math.floor(a[Z]), std.math.floor(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.floor(a[X]), std.math.floor(a[Y]), std.math.floor(a[Z]), std.math.floor(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `fract(x)`.
+pub fn fract(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return a - std.math.floor(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ a - std.math.floor(a[X]), a - std.math.floor(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ a - std.math.floor(a[X]), a - std.math.floor(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ a - std.math.floor(a[X]), a - std.math.floor(a[Y]), a - std.math.floor(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ a - std.math.floor(a[X]), a - std.math.floor(a[Y]), a - std.math.floor(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ a - std.math.floor(a[X]), a - std.math.floor(a[Y]), a - std.math.floor(a[Z]), a - std.math.floor(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ a - std.math.floor(a[X]), a - std.math.floor(a[Y]), a - std.math.floor(a[Z]), a - std.math.floor(a[W]) }; },
+			else => unreachable } } }
+
+// TODO inverse
+// TODO inversesqrt
+// TODO isinf
+// TODO isnan
+
+/// Substitute for GLSL `length(x)`.
+pub fn length(a: anytype) !@typeInfo(@TypeOf(a)) {
+	switch (@TypeOf(a)) {
+		[2]f32, @Vector(2, f32) => { return std.math.sqrt(a[X] * a[X] + a[Y] * a[Y]); },
+		[3]f32, @Vector(3, f32) => { return std.math.sqrt(a[X] * a[X] + a[Y] * a[Y] + a[Z] * a[Z]); },
+		[4]f32, @Vector(4, f32) => { return std.math.sqrt(a[X] * a[X] + a[Y] * a[Y] + a[Z] * a[Z] + a[W] * a[W]); },
+		else => unreachable } }
+
+/// Substitute for GLSL `log(x)`.
+pub fn log(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.float => { return std.math.log(f32, std.math.e, a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.log(f32, std.math.e, a[X]), std.math.log(f32, std.math.e, a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.log(f32, std.math.e, a[X]), std.math.log(f32, std.math.e, a[Y]), std.math.log(f32, std.math.e, a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.log(f32, std.math.e, a[X]), std.math.log(f32, std.math.e, a[Y]), std.math.log(f32, std.math.e, a[Z]), std.math.log(f32, std.math.e, a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `log2(x, y)`.
+pub fn log2(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.float => { return std.math.log2(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.log2(a[X]), std.math.log2(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.log2(a[X]), std.math.log2(a[Y]), std.math.log2(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.log2(a[X]), std.math.log2(a[Y]), std.math.log2(a[Z]), std.math.log2(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `max(x)`.
+pub fn max(a: anytype, b: anytype) !@TypeOf(a) {
+	return @max(a, b); }
+
+/// Substitute for GLSL `min(x)`.
+pub fn min(a: anytype, b: anytype) !@TypeOf(a) {
+	return @min(a, b); }
+
+/// Substitute for GLSL `mix(x)`.
+pub fn mix(a: anytype, b: anytype, c: f32) !@TypeOf(a) {
+	return (1 - c) * a + c * b; }
+
+// TODO mod
+// TODO modf
+// TODO noise1
+// TODO noise2
+// TODO noise3
+// TODO noise4
+
+/// Substitute for GLSL `normalize(x)`.
+pub fn normalize(a: anytype) !@typeInfo(@TypeOf(a)) {
+	return a / length(a); }
+
+// TODO outerProduct
+
+/// Substitute for GLSL `pow(x, y)`.
+pub fn pow(a: anytype, b: f32) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.float => { return std.math.pow(a, b); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.pow(a[X], b), std.math.pow(a[Y], b) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.pow(a[X], b), std.math.pow(a[Y], b), std.math.pow(a[Z], b) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.pow(a[X], b), std.math.pow(a[Y], b), std.math.pow(a[Z], b), std.math.pow(a[W], b) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `radians(degrees)`.
+pub fn radians(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.float => { return (std.math.pi * a) / 180; },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ (std.math.pi * a[X]) / 180, (std.math.pi * a[Y]) / 180 }; },
+			[3]f32, @Vector(3, f32) => { return .{ (std.math.pi * a[X]) / 180, (std.math.pi * a[Y]) / 180, (std.math.pi * a[Z]) / 180 }; },
+			[4]f32, @Vector(4, f32) => { return .{ (std.math.pi * a[X]) / 180, (std.math.pi * a[Y]) / 180, (std.math.pi * a[Z]) / 180, (std.math.pi * a[W]) / 180 }; },
+			else => unreachable } } }
+
+// TODO reflect
+// TODO refract
+// TODO round
+// TODO sign
+
+/// Substitute for GLSL `sin(x)`.
+pub fn sin(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.sin(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.sin(a[X]), std.math.sin(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.sin(a[X]), std.math.sin(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.sin(a[X]), std.math.sin(a[Y]), std.math.sin(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.sin(a[X]), std.math.sin(a[Y]), std.math.sin(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.sin(a[X]), std.math.sin(a[Y]), std.math.sin(a[Z]), std.math.sin(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.sin(a[X]), std.math.sin(a[Y]), std.math.sin(a[Z]), std.math.sin(a[W]) }; },
+			else => unreachable } } }
+
+/// Substitute for GLSL `sinh(x)`.
+pub fn sinh(a: anytype) !@TypeOf(a) {
+	switch (@typeInfo(@TypeOf(a))) {
+		.int, .float => { return std.math.sinh(a); },
+		else => switch (@TypeOf(a)) {
+			[2]f32, @Vector(2, f32) => { return .{ std.math.sinh(a[X]), std.math.sinh(a[Y]) }; },
+			[2]i32, @Vector(2, i32) => { return .{ std.math.sinh(a[X]), std.math.sinh(a[Y]) }; },
+			[3]f32, @Vector(3, f32) => { return .{ std.math.sinh(a[X]), std.math.sinh(a[Y]), std.math.sinh(a[Z]) }; },
+			[3]i32, @Vector(3, i32) => { return .{ std.math.sinh(a[X]), std.math.sinh(a[Y]), std.math.sinh(a[Z]) }; },
+			[4]f32, @Vector(4, f32) => { return .{ std.math.sinh(a[X]), std.math.sinh(a[Y]), std.math.sinh(a[Z]), std.math.sinh(a[W]) }; },
+			[4]i32, @Vector(4, i32) => { return .{ std.math.sinh(a[X]), std.math.sinh(a[Y]), std.math.sinh(a[Z]), std.math.sinh(a[W]) }; },
+			else => unreachable } } }
+
+// TODO sqrt
+// TODO step
+// TODO tan
+// TODO tanh
+// TODO transpose
+// TODO trunc
 
 /// Decompose a slice of bytes representing a color
 // pub fn decomposeColor(color: []u8, n_channels: u8) [][]u8 {
