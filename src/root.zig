@@ -43,19 +43,19 @@ pub const AnyColor = struct {
 	pub fn newRGBA(r: f32, g: f32, b: f32, a: f32) !AnyColor {
 		return .{
 			.color = .{
-				@intFromFloat(r * 0xFF),
-				@intFromFloat(g * 0xFF),
-				@intFromFloat(b * 0xFF),
-				@intFromFloat(a * 0xFF) },
+				@intFromFloat(std.math.clamp(r, 0, 1) * 0xFF),
+				@intFromFloat(std.math.clamp(g, 0, 1) * 0xFF),
+				@intFromFloat(std.math.clamp(b, 0, 1) * 0xFF),
+				@intFromFloat(std.math.clamp(a, 0, 1) * 0xFF) },
 			.n_channels = 4 }; }
 
 	/// Create an RGB `AnyColor`.
 	pub fn newRGB(r: f32, g: f32, b: f32) !AnyColor {
 		return .{
 			.color = .{
-				@intFromFloat(r * 0xFF),
-				@intFromFloat(g * 0xFF),
-				@intFromFloat(b * 0xFF),
+				@intFromFloat(std.math.clamp(r, 0, 1) * 0xFF),
+				@intFromFloat(std.math.clamp(g, 0, 1) * 0xFF),
+				@intFromFloat(std.math.clamp(b, 0, 1) * 0xFF),
 				0 },
 			.n_channels = 3 }; }
 
@@ -63,7 +63,7 @@ pub const AnyColor = struct {
 	pub fn newGray(gray: f32) !AnyColor {
 		return .{
 			.color = .{
-				@intFromFloat(gray * 0xFF),
+				@intFromFloat(std.math.clamp(gray, 0, 1) * 0xFF),
 				0,
 				0,
 				0 },
@@ -152,7 +152,7 @@ pub fn mat2x2(a00: f32, a10: f32, a01: f32, a11: f32) Mat2x2 {
 		.{ a01, a11 } }; }
 
 /// Vector-matrix product of a 2-vector and a 2x2 matrix.
-fn vecMatMul2x2(v: Vec2, m: Mat2x2) Vec2 {
+pub fn vecMatMul2x2(v: Vec2, m: Mat2x2) Vec2 {
 	return Vec2{ dot(v, m[0]), dot(v, m[1]) }; }
 
 /// Rotate a 2x2 matrix.
@@ -178,7 +178,7 @@ pub fn mat2x3(a00: f32, a10: f32, a20: f32, a01: f32, a11: f32, a21: f32) Mat2x3
 		.{ a01, a11, a21 } }; }
 
 /// Vector-matrix product of a 3-vector and a 2x3 matrix.
-fn vecMatMul2x3(v: Vec3, m: Mat2x3) Vec2 {
+pub fn vecMatMul2x3(v: Vec3, m: Mat2x3) Vec2 {
 	return Vec3{ dot(v, m[0]), dot(v, m[1]) }; }
 
 /// Rotate a 2x3 matrix.
@@ -192,9 +192,9 @@ pub fn rotateMat2x3(m: Mat2x3) Mat3x2 {
 pub fn matMul2x3(m1: Mat2x3, m2: Mat3x2) Mat3x3 {
 	const m1rot = rotateMat2x3(m1);
 	return mat3x3(
-		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]),
-		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]),
-		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2])); }
+		dot(m1rot[0], m2[0]), dot(m1rot[0], m2[1]), dot(m1rot[0], m2[2]),
+		dot(m1rot[1], m2[0]), dot(m1rot[1], m2[1]), dot(m1rot[1], m2[2]),
+		dot(m1rot[2], m2[0]), dot(m1rot[2], m2[1]), dot(m1rot[2], m2[2])); }
 
 /// A 2x4 matrix, stored in column-major order.
 pub const Mat2x4 = [2]@Vector(4, f32);
@@ -206,7 +206,7 @@ pub fn mat2x4(a00: f32, a10: f32, a20: f32, a30: f32, a01: f32, a11: f32, a21: f
 		.{ a01, a11, a21, a31 } }; }
 
 /// Vector-matrix product of a 4-vector and a 2x4 matrix.
-fn vecMatMul2x4(v: Vec4, m: Mat2x4) Vec2 {
+pub fn vecMatMul2x4(v: Vec4, m: Mat2x4) Vec2 {
 	return Vec2{ dot(v, m[0]), dot(v, m[1]) }; }
 
 /// Rotate a 2x4 matrix.
@@ -221,10 +221,10 @@ pub fn rotateMat2x4(m: Mat2x4) Mat4x2 {
 pub fn matMul2x4(m1: Mat2x4, m2: Mat4x2) Mat4x4 {
 	const m1rot = rotateMat2x4(m1);
 	return mat4x4(
-		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]), try dot(m1rot[0], m2[3]),
-		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]), try dot(m1rot[1], m2[3]),
-		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2]), try dot(m1rot[2], m2[3]),
-		try dot(m1rot[3], m2[0]), try dot(m1rot[3], m2[1]), try dot(m1rot[3], m2[2]), try dot(m1rot[3], m2[3])); }
+		dot(m1rot[0], m2[0]), dot(m1rot[0], m2[1]), dot(m1rot[0], m2[2]), dot(m1rot[0], m2[3]),
+		dot(m1rot[1], m2[0]), dot(m1rot[1], m2[1]), dot(m1rot[1], m2[2]), dot(m1rot[1], m2[3]),
+		dot(m1rot[2], m2[0]), dot(m1rot[2], m2[1]), dot(m1rot[2], m2[2]), dot(m1rot[2], m2[3]),
+		dot(m1rot[3], m2[0]), dot(m1rot[3], m2[1]), dot(m1rot[3], m2[2]), dot(m1rot[3], m2[3])); }
 
 /// A 3x2 matrix, stored in column-major order.
 pub const Mat3x2 = [3]@Vector(2, f32);
@@ -237,7 +237,7 @@ pub fn mat3x2(a00: f32, a10: f32, a01: f32, a11: f32, a02: f32, a12: f32) Mat3x2
 		.{ a02, a12 } }; }
 
 /// Vector-matrix product of a 2-vector and a 3x2 matrix.
-fn vecMatMul3x2(v: Vec2, m: Mat3x2) Vec3 {
+pub fn vecMatMul3x2(v: Vec2, m: Mat3x2) Vec3 {
 	return Vec3{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]) }; }
 
 /// Rotate a 3x2 matrix.
@@ -250,8 +250,8 @@ pub fn rotateMat3x2(m: Mat3x2) Mat2x3 {
 pub fn matMul3x2(m1: Mat3x2, m2: Mat2x3) Mat2x2 {
 	const m1rot = rotateMat3x2(m1);
 	return mat2x2(
-		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]),
-		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1])); }
+		dot(m1rot[0], m2[0]), dot(m1rot[0], m2[1]),
+		dot(m1rot[1], m2[0]), dot(m1rot[1], m2[1])); }
 
 /// A 3x3 matrix, stored in column-major order.
 pub const Mat3x3 = [3]@Vector(3, f32);
@@ -264,7 +264,7 @@ pub fn mat3x3(a00: f32, a10: f32, a20: f32, a01: f32, a11: f32, a21: f32, a02: f
 		.{ a02, a12, a22 } }; }
 
 /// Vector-matrix product of a 3-vector and a 3x3 matrix.
-fn vecMatMul3x3(v: Vec3, m: Mat3x3) Vec3 {
+pub fn vecMatMul3x3(v: Vec3, m: Mat3x3) Vec3 {
 	return Vec3{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]) }; }
 
 /// Rotate a 3x3 matrix.
@@ -278,9 +278,9 @@ pub fn rotateMat3x3(m: Mat3x3) Mat3x3 {
 pub fn matMul3x3(m1: Mat3x3, m2: Mat3x3) Mat3x3 {
 	const m1rot = rotateMat3x3(m1);
 	return mat3x3(
-		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]),
-		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]),
-		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2])); }
+		dot(m1rot[0], m2[0]), dot(m1rot[0], m2[1]), dot(m1rot[0], m2[2]),
+		dot(m1rot[1], m2[0]), dot(m1rot[1], m2[1]), dot(m1rot[1], m2[2]),
+		dot(m1rot[2], m2[0]), dot(m1rot[2], m2[1]), dot(m1rot[2], m2[2])); }
 
 /// A 3x4 matrix, stored in column-major order.
 pub const Mat3x4 = [3]@Vector(4, f32);
@@ -293,7 +293,7 @@ pub fn mat3x4(a00: f32, a10: f32, a20: f32, a30: f32, a01: f32, a11: f32, a21: f
 		.{ a02, a12, a22, a32 } }; }
 
 /// Vector-matrix product of a 4-vector and a 3x4 matrix.
-fn vecMatMul3x4(v: Vec4, m: Mat3x4) Vec3 {
+pub fn vecMatMul3x4(v: Vec4, m: Mat3x4) Vec3 {
 	return Vec3{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]) }; }
 
 /// Rotate a 3x4 matrix.
@@ -308,10 +308,10 @@ pub fn rotateMat3x4(m: Mat3x4) Mat4x3 {
 pub fn matMul3x4(m1: Mat3x4, m2: Mat4x3) Mat4x4 {
 	const m1rot = rotateMat3x4(m1);
 	return mat4x4(
-		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]), try dot(m1rot[0], m2[3]),
-		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]), try dot(m1rot[1], m2[3]),
-		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2]), try dot(m1rot[2], m2[3]),
-		try dot(m1rot[3], m2[0]), try dot(m1rot[3], m2[1]), try dot(m1rot[3], m2[2]), try dot(m1rot[3], m2[3])); }
+		dot(m1rot[0], m2[0]), dot(m1rot[0], m2[1]), dot(m1rot[0], m2[2]), dot(m1rot[0], m2[3]),
+		dot(m1rot[1], m2[0]), dot(m1rot[1], m2[1]), dot(m1rot[1], m2[2]), dot(m1rot[1], m2[3]),
+		dot(m1rot[2], m2[0]), dot(m1rot[2], m2[1]), dot(m1rot[2], m2[2]), dot(m1rot[2], m2[3]),
+		dot(m1rot[3], m2[0]), dot(m1rot[3], m2[1]), dot(m1rot[3], m2[2]), dot(m1rot[3], m2[3])); }
 
 /// A 4x2 matrix, stored in column-major order.
 pub const Mat4x2 = [4]@Vector(2, f32);
@@ -325,7 +325,7 @@ pub fn mat4x2(a00: f32, a10: f32, a01: f32, a11: f32, a02: f32, a12: f32, a03: f
 		.{ a03, a13 } }; }
 
 /// Vector-matrix product of a 2-vector and a 4x2 matrix.
-fn vecMatMul4x2(v: Vec2, m: Mat4x2) Vec4 {
+pub fn vecMatMul4x2(v: Vec2, m: Mat4x2) Vec4 {
 	return Vec4{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]), dot(v, m[3]) }; }
 
 /// Rotate a 4x2 matrix.
@@ -338,8 +338,8 @@ pub fn rotateMat4x2(m: Mat4x2) Mat2x4 {
 pub fn matMul4x2(m1: Mat4x2, m2: Mat2x4) Mat2x2 {
 	const m1rot = rotateMat4x2(m1);
 	return mat2x2(
-		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]),
-		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1])); }
+		dot(m1rot[0], m2[0]), dot(m1rot[0], m2[1]),
+		dot(m1rot[1], m2[0]), dot(m1rot[1], m2[1])); }
 
 /// A 4x3 matrix, stored in column-major order.
 pub const Mat4x3 = [4]@Vector(3, f32);
@@ -353,7 +353,7 @@ pub fn mat4x3(a00: f32, a10: f32, a20: f32, a01: f32, a11: f32, a21: f32, a02: f
 		.{ a03, a13, a23 } }; }
 
 /// Vector-matrix product of a 3-vector and a 4x3 matrix.
-fn vecMatMul4x3(v: Vec3, m: Mat4x3) Vec4 {
+pub fn vecMatMul4x3(v: Vec3, m: Mat4x3) Vec4 {
 	return Vec4{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]), dot(v, m[3]) }; }
 
 /// Rotate a 4x3 matrix.
@@ -367,9 +367,9 @@ pub fn rotateMat4x3(m: Mat4x3) Mat3x4 {
 pub fn matMul4x3(m1: Mat4x3, m2: Mat3x4) Mat3x3 {
 	const m1rot = rotateMat4x3(m1);
 	return mat3x3(
-		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]),
-		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]),
-		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2])); }
+		dot(m1rot[0], m2[0]), dot(m1rot[0], m2[1]), dot(m1rot[0], m2[2]),
+		dot(m1rot[1], m2[0]), dot(m1rot[1], m2[1]), dot(m1rot[1], m2[2]),
+		dot(m1rot[2], m2[0]), dot(m1rot[2], m2[1]), dot(m1rot[2], m2[2])); }
 
 /// A 4x4 matrix, stored in column-major order.
 pub const Mat4x4 = [4]@Vector(4, f32);
@@ -383,7 +383,7 @@ pub fn mat4x4(a00: f32, a10: f32, a20: f32, a30: f32, a01: f32, a11: f32, a21: f
 		.{ a03, a13, a23, a33 } }; }
 
 /// Vector-matrix product of a 4-vector and a 4x4 matrix.
-fn vecMatMul4x4(v: Vec4, m: Mat4x4) Vec4 {
+pub fn vecMatMul4x4(v: Vec4, m: Mat4x4) Vec4 {
 	return Vec4{ dot(v, m[0]), dot(v, m[1]), dot(v, m[2]), dot(v, m[3]) }; }
 
 /// Rotate a 4x4 matrix.
@@ -398,10 +398,10 @@ pub fn rotateMat4x4(m: Mat4x4) Mat4x4 {
 pub fn matMul4x4(m1: Mat4x4, m2: Mat4x4) Mat4x4 {
 	const m1rot = rotateMat4x4(m1);
 	return mat4x4(
-		try dot(m1rot[0], m2[0]), try dot(m1rot[0], m2[1]), try dot(m1rot[0], m2[2]), try dot(m1rot[0], m2[3]),
-		try dot(m1rot[1], m2[0]), try dot(m1rot[1], m2[1]), try dot(m1rot[1], m2[2]), try dot(m1rot[1], m2[3]),
-		try dot(m1rot[2], m2[0]), try dot(m1rot[2], m2[1]), try dot(m1rot[2], m2[2]), try dot(m1rot[2], m2[3]),
-		try dot(m1rot[3], m2[0]), try dot(m1rot[3], m2[1]), try dot(m1rot[3], m2[2]), try dot(m1rot[3], m2[3])); }
+		dot(m1rot[0], m2[0]), dot(m1rot[0], m2[1]), dot(m1rot[0], m2[2]), dot(m1rot[0], m2[3]),
+		dot(m1rot[1], m2[0]), dot(m1rot[1], m2[1]), dot(m1rot[1], m2[2]), dot(m1rot[1], m2[3]),
+		dot(m1rot[2], m2[0]), dot(m1rot[2], m2[1]), dot(m1rot[2], m2[2]), dot(m1rot[2], m2[3]),
+		dot(m1rot[3], m2[0]), dot(m1rot[3], m2[1]), dot(m1rot[3], m2[2]), dot(m1rot[3], m2[3])); }
 
 /// Vector-matrix product.
 pub fn vecMatMul(v: anytype, m: anytype) @Vector(@typeInfo(@TypeOf(m)).len, f32) {
@@ -450,7 +450,7 @@ pub fn vecMatMul(v: anytype, m: anytype) @Vector(@typeInfo(@TypeOf(m)).len, f32)
 //         else => unreachable } }
 
 /// Substitute for GLSL `abs(x)`.
-pub fn abs(a: anytype) !@TypeOf(a) {
+pub fn abs(a: anytype) @TypeOf(a) {
 	switch (@typeInfo(@TypeOf(a))) {
 		.int, .float, .vector => { return @abs(a); },
 		else => switch (@TypeOf(a)) {
@@ -460,7 +460,7 @@ pub fn abs(a: anytype) !@TypeOf(a) {
 			[3]i32 => { return @abs(@Vector(3, i32){ a[X], a[Y], a[Z] }); },
 			[4]f32 => { return @abs(@Vector(4, f32){ a[X], a[Y], a[Z], a[W] }); },
 			[4]i32 => { return @abs(@Vector(4, i32){ a[X], a[Y], a[Z], a[W] }); },
-			else => unreachable } } }
+			else => { @compileError("Cannot take `abs` of '" ++ @typeName(@TypeOf(a)) ++ "'"); } } } }
 
 /// Substitute for GLSL `acos(x)`.
 pub fn acos(a: anytype) !@TypeOf(a) {
@@ -589,7 +589,7 @@ pub fn clamp(x: anytype, minVal: @TypeOf(x), maxVal: @TypeOf(x)) !@TypeOf(x) {
 			else => unreachable } } }
 
 /// Substitute for GLSL `cos(x)`.
-pub fn cos(a: anytype) !@TypeOf(a) {
+pub fn cos(a: anytype) @TypeOf(a) {
 	switch (@typeInfo(@TypeOf(a))) {
 		.int, .float => { return std.math.cos(a); },
 		else => switch (@TypeOf(a)) {
@@ -615,7 +615,7 @@ pub fn cosh(a: anytype) !@TypeOf(a) {
 			else => unreachable } } }
 
 /// Substitute for GLSL `cross(x, y)`.
-pub fn cross(x: anytype, y: @TypeOf(x)) !@TypeOf(x) {
+pub fn cross(x: anytype, y: @TypeOf(x)) @TypeOf(x) {
 	switch (@TypeOf(x)) {
 		[3]f32, @Vector(3, f32) => { return .{ x[1] * y[2] - x[2] * y[1], x[2] * y[0] - x[0] * y[2], x[0] * y[1] - x[1] * y[0] }; },
 		else => unreachable } }
@@ -637,7 +637,7 @@ pub fn distance(a: anytype, b: @TypeOf(a)) !@TypeOf(a) {
 	return length(a - b); }
 
 /// Substitute for GLSL `dot(x, y)`.
-pub fn dot(a: anytype, b: @TypeOf(a)) !@typeInfo(@TypeOf(a)).vector.child {
+pub fn dot(a: anytype, b: @TypeOf(a)) @typeInfo(@TypeOf(a)).vector.child {
 	switch (@TypeOf(a)) {
 		[2]f32, @Vector(2, f32) => { return a[X] * b[X] + a[Y] * b[Y]; },
 		[3]f32, @Vector(3, f32) => { return a[X] * b[X] + a[Y] * b[Y] + a[Z] * b[Z]; },
@@ -676,7 +676,7 @@ pub fn fract(a: anytype) !@TypeOf(a) {
 // TODO isnan
 
 /// Substitute for GLSL `length(x)`.
-pub fn length(a: anytype) !@typeInfo(@TypeOf(a)) {
+pub fn length(a: anytype) @typeInfo(@TypeOf(a)).vector.child {
 	switch (@TypeOf(a)) {
 		[2]f32, @Vector(2, f32) => { return std.math.sqrt(a[X] * a[X] + a[Y] * a[Y]); },
 		[3]f32, @Vector(3, f32) => { return std.math.sqrt(a[X] * a[X] + a[Y] * a[Y] + a[Z] * a[Z]); },
@@ -704,16 +704,16 @@ pub fn log2(a: anytype) !@TypeOf(a) {
 			else => unreachable } } }
 
 /// Substitute for GLSL `max(x)`.
-pub fn max(a: anytype, b: anytype) !@TypeOf(a) {
+pub fn max(a: anytype, b: anytype) @TypeOf(a) {
 	return @max(a, b); }
 
 /// Substitute for GLSL `min(x)`.
-pub fn min(a: anytype, b: anytype) !@TypeOf(a) {
+pub fn min(a: anytype, b: anytype) @TypeOf(a) {
 	return @min(a, b); }
 
 /// Substitute for GLSL `mix(x)`.
-pub fn mix(a: anytype, b: anytype, c: f32) !@TypeOf(a) {
-	return (1 - c) * a + c * b; }
+pub fn mix(a: anytype, b: anytype, c: f32) @TypeOf(a) {
+	return @as(@TypeOf(a), @splat(1 - c)) * a + @as(@TypeOf(a), @splat(c)) * b; }
 
 // TODO mod
 // TODO modf
@@ -723,8 +723,8 @@ pub fn mix(a: anytype, b: anytype, c: f32) !@TypeOf(a) {
 // TODO noise4
 
 /// Substitute for GLSL `normalize(x)`.
-pub fn normalize(a: anytype) !@typeInfo(@TypeOf(a)) {
-	return a / length(a); }
+pub fn normalize(a: anytype) @TypeOf(a) {
+	return a / @as(@TypeOf(a), @splat(length(a))); }
 
 // TODO outerProduct
 
@@ -754,7 +754,7 @@ pub fn radians(a: anytype) !@TypeOf(a) {
 // TODO sign
 
 /// Substitute for GLSL `sin(x)`.
-pub fn sin(a: anytype) !@TypeOf(a) {
+pub fn sin(a: anytype) @TypeOf(a) {
 	switch (@typeInfo(@TypeOf(a))) {
 		.int, .float => { return std.math.sin(a); },
 		else => switch (@TypeOf(a)) {
@@ -1312,6 +1312,7 @@ pub const Window = struct {
 	buffer:        Buffer,
 	mouseState:    MouseState = .{},
 	keyboardState: KeyboardState = .{},
+	timer:         std.time.Timer = undefined,
 
 	/// Allocate and initialize a new `Window`.
 	pub fn new(config: WindowConfig, allocator: std.mem.Allocator) !*Window {
@@ -1365,7 +1366,12 @@ pub const Window = struct {
 		window.h_dc = win32.GetDC(window.h_wnd);
 		std.debug.print("________________________________________\n", .{});
 		if (window.h_dc == null) { return error.CreateWindowFailed; }
+		window.timer = try std.time.Timer.start();
 		return window; }
+
+	/// Get the time since creation of the given `Window` in seconds.
+	pub fn getTime(self: *Window) f32 {
+		return @as(f32, @floatFromInt(self.timer.read())) / std.time.ns_per_s; }
 
 	/// Collect events from the given `Window`. Returns `false` when the `Window` is closed.
 	pub fn poll(_: *const Window) bool {
